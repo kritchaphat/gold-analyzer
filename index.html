@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🥇 GOLD Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #FFD700;
+    --gold-dark: #B8860B;
+    --gold-light: #FFF0A0;
+    --bg: #0a0a0f;
+    --bg2: #111118;
+    --bg3: #1a1a24;
+    --border: #2a2a3a;
+    --text: #e8e8f0;
+    --text-dim: #7a7a9a;
+    --red: #ff4466;
+    --green: #00cc88;
+    --blue: #4499ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Sarabun', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background effect */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at 30% 20%, rgba(255,215,0,0.04) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(68,153,255,0.03) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 16px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+
+  .header-left h1 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px rgba(255,215,0,0.3);
+  }
+
+  .header-left p {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,204,136,0.1);
+    border: 1px solid rgba(0,204,136,0.3);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: var(--green);
+    font-weight: 600;
+  }
+
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  /* API Setup Card */
+  .setup-card {
+    background: var(--bg3);
+    border: 1px solid var(--gold-dark);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .setup-card h3 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    color: var(--gold);
+    margin-bottom: 14px;
+    letter-spacing: 1px;
+  }
+
+  .input-group {
+    margin-bottom: 12px;
+  }
+
+  .input-group label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .input-group input {
+    width: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: monospace;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .input-group input:focus {
+    border-color: var(--gold-dark);
+  }
+
+  .input-group input::placeholder {
+    color: var(--text-dim);
+  }
+
+  /* TF Selector */
+  .tf-selector {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .tf-selector h3 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .tf-buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .tf-btn {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 4px;
+    color: var(--text-dim);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    letter-spacing: 1px;
+  }
+
+  .tf-btn.active {
+    background: rgba(255,215,0,0.1);
+    border-color: var(--gold-dark);
+    color: var(--gold);
+  }
+
+  /* Analyze Button */
+  .analyze-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #B8860B, #FFD700, #B8860B);
+    border: none;
+    border-radius: 14px;
+    padding: 16px;
+    color: #0a0a0f;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+    text-transform: uppercase;
+  }
+
+  .analyze-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255,215,0,0.3);
+  }
+
+  .analyze-btn:active {
+    transform: translateY(0);
+  }
+
+  .analyze-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .analyze-btn .btn-shine {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shine 2s infinite;
+  }
+
+  @keyframes shine {
+    0% { left: -100%; }
+    100% { left: 200%; }
+  }
+
+  /* Loading */
+  .loading {
+    display: none;
+    text-align: center;
+    padding: 30px;
+  }
+
+  .loading.show { display: block; }
+
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .loading p {
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+
+  /* Price Card */
+  .price-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+    display: none;
+  }
+
+  .price-card.show { display: block; }
+
+  .price-main {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .price-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .price-value {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--gold);
+    text-shadow: 0 0 15px rgba(255,215,0,0.2);
+  }
+
+  .price-change {
+    font-size: 14px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+
+  .price-change.up {
+    background: rgba(0,204,136,0.15);
+    color: var(--green);
+  }
+
+  .price-change.down {
+    background: rgba(255,68,102,0.15);
+    color: var(--red);
+  }
+
+  /* TF Cards */
+  .tf-results {
+    display: none;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-direction: column;
+  }
+
+  .tf-results.show { display: flex; }
+
+  .tf-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    border-left: 3px solid var(--border);
+    transition: all 0.3s;
+    animation: fadeIn 0.5s ease forwards;
+    opacity: 0;
+  }
+
+  .tf-card.bullish { border-left-color: var(--green); }
+  .tf-card.bearish { border-left-color: var(--red); }
+  .tf-card.neutral { border-left-color: var(--blue); }
+
+  @keyframes fadeIn {
+    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(10px); }
+  }
+
+  .tf-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .tf-name {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 1px;
+  }
+
+  .trend-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  .trend-badge.up {
+    background: rgba(0,204,136,0.15);
+    color: var(--green);
+    border: 1px solid rgba(0,204,136,0.3);
+  }
+
+  .trend-badge.down {
+    background: rgba(255,68,102,0.15);
+    color: var(--red);
+    border: 1px solid rgba(255,68,102,0.3);
+  }
+
+  .trend-badge.neutral {
+    background: rgba(68,153,255,0.15);
+    color: var(--blue);
+    border: 1px solid rgba(68,153,255,0.3);
+  }
+
+  .indicators-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+
+  .indicator-chip {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .indicator-chip span {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .tf-summary {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  /* Analysis Result */
+  .analysis-card {
+    background: var(--bg3);
+    border: 1px solid var(--gold-dark);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+    display: none;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .analysis-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  .analysis-card.show { display: block; }
+
+  .analysis-card h3 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    color: var(--gold);
+    margin-bottom: 16px;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .signal-box {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .signal-item {
+    flex: 1;
+    background: var(--bg2);
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+    border: 1px solid var(--border);
+  }
+
+  .signal-item .s-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .signal-item .s-value {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .signal-item.entry .s-value { color: var(--blue); }
+  .signal-item.sl .s-value { color: var(--red); }
+  .signal-item.tp .s-value { color: var(--green); }
+
+  .analysis-text {
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+    background: var(--bg2);
+    border-radius: 10px;
+    padding: 14px;
+    border-left: 3px solid var(--gold-dark);
+    white-space: pre-wrap;
+  }
+
+  /* Warning */
+  .warning {
+    background: rgba(255,68,102,0.08);
+    border: 1px solid rgba(255,68,102,0.2);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--text-dim);
+    text-align: center;
+    margin-bottom: 16px;
+    display: none;
+  }
+
+  .warning.show { display: block; }
+
+  /* Error */
+  .error-msg {
+    background: rgba(255,68,102,0.1);
+    border: 1px solid rgba(255,68,102,0.3);
+    border-radius: 12px;
+    padding: 14px;
+    color: var(--red);
+    font-size: 13px;
+    margin-bottom: 16px;
+    display: none;
+  }
+
+  .error-msg.show { display: block; }
+
+  /* Disclaimer */
+  .disclaimer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-dim);
+    padding: 16px 0 24px;
+    line-height: 1.6;
+    border-top: 1px solid var(--border);
+    margin-top: 8px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1>⚡ GOLD AI</h1>
+      <p>XAU/USD Multi-Timeframe Analyzer</p>
+    </div>
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      LIVE
+    </div>
+  </div>
+
+  <!-- API Setup -->
+  <div class="setup-card">
+    <h3>🔑 ตั้งค่า API Keys</h3>
+    <div class="input-group">
+      <label>Anthropic API Key</label>
+      <input type="password" id="anthropicKey" placeholder="sk-ant-..." />
+    </div>
+    <div class="input-group">
+      <label>Alpha Vantage API Key</label>
+      <input type="text" id="alphaKey" placeholder="ใส่ Alpha Vantage Key ที่นี่" />
+    </div>
+    <p style="font-size:11px;color:var(--text-dim);margin-top:8px;">⚠️ Key จะถูกเก็บในเครื่องคุณเท่านั้น ไม่ส่งไปไหน</p>
+  </div>
+
+  <!-- TF Selector -->
+  <div class="tf-selector">
+    <h3>เลือก Timeframe</h3>
+    <div class="tf-buttons">
+      <button class="tf-btn active" data-tf="60">H1</button>
+      <button class="tf-btn active" data-tf="30">M30</button>
+      <button class="tf-btn active" data-tf="15">M15</button>
+      <button class="tf-btn active" data-tf="5">M5</button>
+    </div>
+  </div>
+
+  <!-- Analyze Button -->
+  <button class="analyze-btn" onclick="analyze()">
+    <div class="btn-shine"></div>
+    🔍 วิเคราะห์ทองตอนนี้
+  </button>
+
+  <!-- Error -->
+  <div class="error-msg" id="errorMsg"></div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <div class="loading-spinner"></div>
+    <p id="loadingText">กำลังดึงข้อมูลทอง...</p>
+  </div>
+
+  <!-- Price Card -->
+  <div class="price-card" id="priceCard">
+    <div class="price-label">XAU/USD ราคาปัจจุบัน</div>
+    <div class="price-main">
+      <div class="price-value" id="currentPrice">-</div>
+      <div class="price-change" id="priceChange">-</div>
+    </div>
+    <div style="font-size:12px;color:var(--text-dim)" id="priceTime">-</div>
+  </div>
+
+  <!-- TF Results -->
+  <div class="tf-results" id="tfResults"></div>
+
+  <!-- Analysis Card -->
+  <div class="analysis-card" id="analysisCard">
+    <h3>🤖 AI วิเคราะห์</h3>
+    <div class="signal-box" id="signalBox"></div>
+    <div class="analysis-text" id="analysisText"></div>
+  </div>
+
+  <!-- Warning -->
+  <div class="warning show">
+    ⚠️ ผลวิเคราะห์นี้ใช้ประกอบการตัดสินใจเท่านั้น ไม่ใช่คำแนะนำการลงทุน การเทรดมีความเสี่ยง
+  </div>
+
+  <!-- Disclaimer -->
+  <div class="disclaimer">
+    GOLD AI Analyzer • ข้อมูลจาก Alpha Vantage<br>
+    วิเคราะห์โดย Claude AI • ใช้เพื่อการศึกษาเท่านั้น
+  </div>
+
+</div>
+
+<script>
+// TF button toggle
+document.querySelectorAll('.tf-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    btn.classList.toggle('active');
+  });
+});
+
+// Save/load keys
+window.addEventListener('load', () => {
+  const ak = localStorage.getItem('anthropicKey');
+  const av = localStorage.getItem('alphaKey');
+  if (ak) document.getElementById('anthropicKey').value = ak;
+  if (av) document.getElementById('alphaKey').value = av;
+});
+
+function saveKeys() {
+  localStorage.setItem('anthropicKey', document.getElementById('anthropicKey').value);
+  localStorage.setItem('alphaKey', document.getElementById('alphaKey').value);
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function hideError() {
+  document.getElementById('errorMsg').classList.remove('show');
+}
+
+function setLoading(show, text = 'กำลังดึงข้อมูลทอง...') {
+  document.getElementById('loading').classList.toggle('show', show);
+  document.getElementById('loadingText').textContent = text;
+}
+
+// Calculate RSI
+function calcRSI(closes, period = 14) {
+  if (closes.length < period + 1) return null;
+  let gains = 0, losses = 0;
+  for (let i = closes.length - period; i < closes.length; i++) {
+    const diff = closes[i] - closes[i-1];
+    if (diff > 0) gains += diff;
+    else losses += Math.abs(diff);
+  }
+  const avgGain = gains / period;
+  const avgLoss = losses / period;
+  if (avgLoss === 0) return 100;
+  const rs = avgGain / avgLoss;
+  return Math.round(100 - (100 / (1 + rs)));
+}
+
+// Calculate EMA
+function calcEMA(data, period) {
+  const k = 2 / (period + 1);
+  let ema = data[0];
+  for (let i = 1; i < data.length; i++) {
+    ema = data[i] * k + ema * (1 - k);
+  }
+  return ema;
+}
+
+// Calculate MACD
+function calcMACD(closes) {
+  if (closes.length < 26) return null;
+  const ema12 = calcEMA(closes.slice(-26), 12);
+  const ema26 = calcEMA(closes.slice(-26), 26);
+  return Math.round((ema12 - ema26) * 100) / 100;
+}
+
+// Fetch gold data from Alpha Vantage
+async function fetchGoldData(interval, apiKey) {
+  const intervalMap = { '5': '5min', '15': '15min', '30': '30min', '60': '60min' };
+  const avInterval = intervalMap[interval];
+  
+  const url = `https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=XAU&to_symbol=USD&interval=${avInterval}&outputsize=compact&apikey=${apiKey}`;
+  
+  const response = await fetch(url);
+  const data = await response.json();
+  
+  const key = `Time Series FX (${avInterval})`;
+  if (!data[key]) {
+    if (data['Note']) throw new Error('Alpha Vantage API limit reached - รอ 1 นาทีแล้วลองใหม่');
+    if (data['Error Message']) throw new Error('Alpha Vantage: ไม่พบข้อมูล XAU/USD');
+    throw new Error('ไม่สามารถดึงข้อมูลได้ กรุณาตรวจสอบ Alpha Vantage API Key');
+  }
+  
+  const timeSeries = data[key];
+  const entries = Object.entries(timeSeries).sort((a, b) => new Date(a[0]) - new Date(b[0]));
+  
+  const closes = entries.map(e => parseFloat(e[1]['4. close']));
+  const latest = entries[entries.length - 1];
+  const prev = entries[entries.length - 2];
+  
+  return {
+    closes,
+    currentPrice: parseFloat(latest[1]['4. close']),
+    open: parseFloat(latest[1]['1. open']),
+    high: parseFloat(latest[1]['2. high']),
+    low: parseFloat(latest[1]['3. low']),
+    prevClose: parseFloat(prev[1]['4. close']),
+    time: latest[0],
+    rsi: calcRSI(closes),
+    macd: calcMACD(closes),
+    ema20: closes.length >= 20 ? Math.round(calcEMA(closes.slice(-20), 20) * 100) / 100 : null,
+    ema50: closes.length >= 50 ? Math.round(calcEMA(closes.slice(-50), 50) * 100) / 100 : null,
+  };
+}
+
+// Get trend from indicators
+function getTrend(data) {
+  let bullish = 0, bearish = 0;
+  if (data.rsi > 55) bullish++;
+  else if (data.rsi < 45) bearish++;
+  if (data.macd > 0) bullish++;
+  else if (data.macd < 0) bearish++;
+  if (data.ema20 && data.currentPrice > data.ema20) bullish++;
+  else if (data.ema20 && data.currentPrice < data.ema20) bearish++;
+  
+  if (bullish > bearish) return 'up';
+  if (bearish > bullish) return 'down';
+  return 'neutral';
+}
+
+// Render TF card
+function renderTFCard(tfName, data, index) {
+  const trend = getTrend(data);
+  const trendLabel = trend === 'up' ? '🟢 ขาขึ้น' : trend === 'down' ? '🔴 ขาลง' : '🔵 Sideways';
+  const change = data.currentPrice - data.prevClose;
+  const changePct = ((change / data.prevClose) * 100).toFixed(2);
+
+  return `
+    <div class="tf-card ${trend === 'up' ? 'bullish' : trend === 'down' ? 'bearish' : 'neutral'}" 
+         style="animation-delay: ${index * 0.1}s">
+      <div class="tf-card-header">
+        <div class="tf-name">${tfName}</div>
+        <div class="trend-badge ${trend === 'up' ? 'up' : trend === 'down' ? 'down' : 'neutral'}">${trendLabel}</div>
+      </div>
+      <div class="indicators-row">
+        ${data.rsi ? `<div class="indicator-chip">RSI <span>${data.rsi}</span></div>` : ''}
+        ${data.macd !== null ? `<div class="indicator-chip">MACD <span>${data.macd}</span></div>` : ''}
+        ${data.ema20 ? `<div class="indicator-chip">EMA20 <span>${data.ema20}</span></div>` : ''}
+      </div>
+      <div class="tf-summary">
+        ราคา: <strong style="color:var(--gold)">${data.currentPrice.toFixed(2)}</strong> | 
+        H: ${data.high.toFixed(2)} | L: ${data.low.toFixed(2)} | 
+        เปลี่ยน: <span style="color:${change >= 0 ? 'var(--green)' : 'var(--red)'}">${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePct}%)</span>
+      </div>
+    </div>
+  `;
+}
+
+// Main analyze function
+async function analyze() {
+  hideError();
+  
+  const anthropicKey = document.getElementById('anthropicKey').value.trim();
+  const alphaKey = document.getElementById('alphaKey').value.trim();
+  
+  if (!anthropicKey || !alphaKey) {
+    showError('❌ กรุณาใส่ API Key ทั้งสองตัวก่อนครับ');
+    return;
+  }
+  
+  saveKeys();
+  
+  const activeTFs = [...document.querySelectorAll('.tf-btn.active')].map(b => ({
+    tf: b.dataset.tf,
+    name: b.textContent
+  }));
+  
+  if (activeTFs.length === 0) {
+    showError('❌ กรุณาเลือก Timeframe อย่างน้อย 1 ตัวครับ');
+    return;
+  }
+  
+  document.querySelector('.analyze-btn').disabled = true;
+  document.getElementById('priceCard').classList.remove('show');
+  document.getElementById('tfResults').classList.remove('show');
+  document.getElementById('analysisCard').classList.remove('show');
+  setLoading(true, 'กำลังดึงข้อมูลทอง...');
+  
+  try {
+    // Fetch all TF data
+    const tfDataMap = {};
+    for (const { tf, name } of activeTFs) {
+      setLoading(true, `กำลังดึงข้อมูล ${name}...`);
+      const data = await fetchGoldData(tf, alphaKey);
+      tfDataMap[name] = data;
+      await new Promise(r => setTimeout(r, 500)); // rate limit
+    }
+    
+    // Show price from highest TF
+    const firstData = tfDataMap[activeTFs[0].name];
+    const priceChange = firstData.currentPrice - firstData.prevClose;
+    const pricePct = ((priceChange / firstData.prevClose) * 100).toFixed(2);
+    
+    document.getElementById('currentPrice').textContent = firstData.currentPrice.toFixed(2);
+    const changeEl = document.getElementById('priceChange');
+    changeEl.textContent = `${priceChange >= 0 ? '+' : ''}${priceChange.toFixed(2)} (${pricePct}%)`;
+    changeEl.className = `price-change ${priceChange >= 0 ? 'up' : 'down'}`;
+    document.getElementById('priceTime').textContent = `อัปเดต: ${firstData.time} UTC`;
+    document.getElementById('priceCard').classList.add('show');
+    
+    // Render TF cards
+    const tfContainer = document.getElementById('tfResults');
+    tfContainer.innerHTML = activeTFs.map(({ name }, i) => 
+      renderTFCard(name, tfDataMap[name], i)
+    ).join('');
+    tfContainer.classList.add('show');
+    
+    // Prepare data for Claude
+    setLoading(true, 'AI กำลังวิเคราะห์...');
+    
+    const tfSummary = activeTFs.map(({ name }) => {
+      const d = tfDataMap[name];
+      const trend = getTrend(d);
+      return `
+[${name}]
+- ราคา: ${d.currentPrice.toFixed(2)} | High: ${d.high.toFixed(2)} | Low: ${d.low.toFixed(2)}
+- RSI(14): ${d.rsi || 'N/A'}
+- MACD: ${d.macd || 'N/A'}
+- EMA20: ${d.ema20 || 'N/A'} | EMA50: ${d.ema50 || 'N/A'}
+- แนวโน้ม: ${trend === 'up' ? 'ขาขึ้น' : trend === 'down' ? 'ขาลง' : 'Sideways'}`;
+    }).join('\n');
+    
+    const prompt = `คุณเป็นนักวิเคราะห์ Forex ผู้เชี่ยวชาญ วิเคราะห์ทอง XAU/USD จากข้อมูลต่อไปนี้:
+
+${tfSummary}
+
+กรุณาวิเคราะห์แบบละเอียดและให้:
+1. สรุปแนวโน้มรวม (Bull/Bear/Sideways) พร้อมเหตุผล
+2. จุด Entry ที่แนะนำ (ราคา)
+3. Stop Loss (SL) ที่เหมาะสม
+4. Take Profit (TP1, TP2, TP3)
+5. ระดับความเสี่ยง (ต่ำ/กลาง/สูง)
+6. คำแนะนำเพิ่มเติมสำหรับการเทรดครั้งนี้
+
+ตอบเป็นภาษาไทย กระชับ ชัดเจน เน้นข้อมูลที่เป็นประโยชน์ต่อการเทรด`;
+
+    // Call Claude API
+    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    
+    if (!claudeRes.ok) {
+      const err = await claudeRes.json();
+      throw new Error(`Claude API: ${err.error?.message || 'ไม่สามารถเชื่อมต่อได้'}`);
+    }
+    
+    const claudeData = await claudeRes.json();
+    const analysisText = claudeData.content[0].text;
+    
+    // Parse entry/sl/tp from text
+    const entryMatch = analysisText.match(/Entry[:\s]+([0-9,\.]+)/i);
+    const slMatch = analysisText.match(/SL[:\s]+([0-9,\.]+)/i);
+    const tp1Match = analysisText.match(/TP1[:\s]+([0-9,\.]+)/i);
+    
+    // Render signal boxes
+    document.getElementById('signalBox').innerHTML = `
+      <div class="signal-item entry">
+        <div class="s-label">Entry</div>
+        <div class="s-value">${entryMatch ? entryMatch[1] : firstData.currentPrice.toFixed(0)}</div>
+      </div>
+      <div class="signal-item sl">
+        <div class="s-label">Stop Loss</div>
+        <div class="s-value">${slMatch ? slMatch[1] : '-'}</div>
+      </div>
+      <div class="signal-item tp">
+        <div class="s-label">TP1</div>
+        <div class="s-value">${tp1Match ? tp1Match[1] : '-'}</div>
+      </div>
+    `;
+    
+    document.getElementById('analysisText').textContent = analysisText;
+    document.getElementById('analysisCard').classList.add('show');
+    
+    setLoading(false);
+    
+  } catch (err) {
+    setLoading(false);
+    showError(`❌ ${err.message}`);
+  } finally {
+    document.querySelector('.analyze-btn').disabled = false;
+  }
+}
+</script>
+</body>
+</html>
