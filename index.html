@@ -3,13 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🥇 GOLD Analyzer</title>
+<title>⚡ GOLD AI Analyzer</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
   :root {
     --gold: #FFD700;
     --gold-dark: #B8860B;
-    --gold-light: #FFF0A0;
     --bg: #0a0a0f;
     --bg2: #111118;
     --bg3: #1a1a24;
@@ -20,31 +19,21 @@
     --green: #00cc88;
     --blue: #4499ff;
   }
-
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
   body {
     background: var(--bg);
     color: var(--text);
     font-family: 'Sarabun', sans-serif;
     min-height: 100vh;
-    overflow-x: hidden;
   }
-
-  /* Background effect */
   body::before {
     content: '';
     position: fixed;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(ellipse at 30% 20%, rgba(255,215,0,0.04) 0%, transparent 50%),
-                radial-gradient(ellipse at 70% 80%, rgba(68,153,255,0.03) 0%, transparent 50%);
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 20% 20%, rgba(255,215,0,0.05) 0%, transparent 60%);
     pointer-events: none;
     z-index: 0;
   }
-
   .container {
     max-width: 480px;
     margin: 0 auto;
@@ -52,8 +41,6 @@
     position: relative;
     z-index: 1;
   }
-
-  /* Header */
   .header {
     display: flex;
     align-items: center;
@@ -62,879 +49,521 @@
     border-bottom: 1px solid var(--border);
     margin-bottom: 20px;
   }
-
-  .header-left h1 {
+  .header h1 {
     font-family: 'Rajdhani', sans-serif;
-    font-size: 26px;
+    font-size: 28px;
     font-weight: 700;
     color: var(--gold);
     letter-spacing: 2px;
     text-shadow: 0 0 20px rgba(255,215,0,0.3);
   }
-
-  .header-left p {
-    font-size: 12px;
-    color: var(--text-dim);
-    margin-top: 2px;
-  }
-
-  .live-badge {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(0,204,136,0.1);
-    border: 1px solid rgba(0,204,136,0.3);
-    border-radius: 20px;
-    padding: 4px 10px;
-    font-size: 11px;
-    color: var(--green);
-    font-weight: 600;
-  }
-
+  .header p { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
   .live-dot {
-    width: 6px;
-    height: 6px;
+    width: 8px; height: 8px;
     background: var(--green);
     border-radius: 50%;
     animation: pulse 1.5s infinite;
+    box-shadow: 0 0 8px var(--green);
   }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.8); }
-  }
-
-  /* API Setup Card */
-  .setup-card {
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+  .card {
     background: var(--bg3);
-    border: 1px solid var(--gold-dark);
+    border: 1px solid var(--border);
     border-radius: 16px;
-    padding: 20px;
-    margin-bottom: 20px;
-  }
-
-  .setup-card h3 {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 16px;
-    color: var(--gold);
+    padding: 18px;
     margin-bottom: 14px;
-    letter-spacing: 1px;
   }
-
-  .input-group {
+  .card-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    color: var(--text-dim);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
     margin-bottom: 12px;
   }
-
-  .input-group label {
+  .input-wrap { margin-bottom: 10px; }
+  .input-wrap label {
     display: block;
     font-size: 11px;
     color: var(--text-dim);
-    margin-bottom: 6px;
+    margin-bottom: 5px;
     text-transform: uppercase;
     letter-spacing: 1px;
   }
-
-  .input-group input {
+  .input-wrap input {
     width: 100%;
     background: var(--bg2);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 10px 14px;
+    padding: 11px 14px;
     color: var(--text);
     font-size: 13px;
     font-family: monospace;
     outline: none;
     transition: border-color 0.2s;
   }
-
-  .input-group input:focus {
-    border-color: var(--gold-dark);
-  }
-
-  .input-group input::placeholder {
+  .input-wrap input:focus { border-color: var(--gold-dark); }
+  .input-wrap input::placeholder { color: var(--text-dim); }
+  .key-note {
+    font-size: 11px;
     color: var(--text-dim);
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: rgba(255,215,0,0.05);
+    border-radius: 8px;
+    border-left: 2px solid var(--gold-dark);
   }
-
-  /* TF Selector */
-  .tf-selector {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 16px;
-    margin-bottom: 16px;
-  }
-
-  .tf-selector h3 {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 14px;
-    color: var(--text-dim);
-    margin-bottom: 12px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-
-  .tf-buttons {
+  .tf-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 8px;
   }
-
   .tf-btn {
     background: var(--bg2);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 10px 4px;
+    padding: 12px 4px;
     color: var(--text-dim);
     font-family: 'Rajdhani', sans-serif;
-    font-size: 15px;
-    font-weight: 600;
+    font-size: 16px;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
     text-align: center;
     letter-spacing: 1px;
   }
-
   .tf-btn.active {
     background: rgba(255,215,0,0.1);
     border-color: var(--gold-dark);
     color: var(--gold);
+    box-shadow: 0 0 10px rgba(255,215,0,0.1);
   }
-
-  /* Analyze Button */
-  .analyze-btn {
+  .btn-analyze {
     width: 100%;
-    background: linear-gradient(135deg, #B8860B, #FFD700, #B8860B);
+    background: linear-gradient(135deg, #8B6914, #FFD700, #8B6914);
     border: none;
     border-radius: 14px;
-    padding: 16px;
+    padding: 17px;
     color: #0a0a0f;
     font-family: 'Rajdhani', sans-serif;
-    font-size: 18px;
+    font-size: 19px;
     font-weight: 700;
     letter-spacing: 2px;
     cursor: pointer;
     transition: all 0.3s;
-    margin-bottom: 20px;
+    margin-bottom: 18px;
+    text-transform: uppercase;
     position: relative;
     overflow: hidden;
-    text-transform: uppercase;
   }
-
-  .analyze-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(255,215,0,0.3);
-  }
-
-  .analyze-btn:active {
-    transform: translateY(0);
-  }
-
-  .analyze-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  .analyze-btn .btn-shine {
+  .btn-analyze::after {
+    content: '';
     position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-    animation: shine 2s infinite;
+    top: 0; left: -100%; width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+    animation: shine 2.5s infinite;
   }
-
-  @keyframes shine {
-    0% { left: -100%; }
-    100% { left: 200%; }
-  }
-
-  /* Loading */
-  .loading {
-    display: none;
-    text-align: center;
-    padding: 30px;
-  }
-
+  @keyframes shine { 0%{left:-100%} 100%{left:200%} }
+  .btn-analyze:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255,215,0,0.25); }
+  .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .loading { display: none; text-align: center; padding: 28px 0; }
   .loading.show { display: block; }
-
-  .loading-spinner {
-    width: 40px;
-    height: 40px;
+  .spinner {
+    width: 38px; height: 38px;
     border: 3px solid var(--border);
     border-top-color: var(--gold);
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    animation: spin 0.7s linear infinite;
     margin: 0 auto 12px;
   }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-
-  .loading p {
-    color: var(--text-dim);
-    font-size: 13px;
-  }
-
-  /* Price Card */
-  .price-card {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 20px;
-    margin-bottom: 16px;
-    display: none;
-  }
-
-  .price-card.show { display: block; }
-
-  .price-main {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    margin-bottom: 8px;
-  }
-
-  .price-label {
-    font-size: 11px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-
-  .price-value {
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--text-dim); font-size: 13px; }
+  .price-display { display: none; }
+  .price-display.show { display: block; }
+  .price-big {
     font-family: 'Rajdhani', sans-serif;
-    font-size: 36px;
+    font-size: 42px;
     font-weight: 700;
     color: var(--gold);
-    text-shadow: 0 0 15px rgba(255,215,0,0.2);
+    text-shadow: 0 0 20px rgba(255,215,0,0.2);
+    line-height: 1;
   }
-
-  .price-change {
-    font-size: 14px;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 6px;
-  }
-
-  .price-change.up {
-    background: rgba(0,204,136,0.15);
-    color: var(--green);
-  }
-
-  .price-change.down {
-    background: rgba(255,68,102,0.15);
-    color: var(--red);
-  }
-
-  /* TF Cards */
-  .tf-results {
-    display: none;
-    gap: 12px;
-    margin-bottom: 16px;
-    flex-direction: column;
-  }
-
-  .tf-results.show { display: flex; }
-
-  .tf-card {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px;
-    border-left: 3px solid var(--border);
-    transition: all 0.3s;
-    animation: fadeIn 0.5s ease forwards;
-    opacity: 0;
-  }
-
-  .tf-card.bullish { border-left-color: var(--green); }
-  .tf-card.bearish { border-left-color: var(--red); }
-  .tf-card.neutral { border-left-color: var(--blue); }
-
-  @keyframes fadeIn {
-    to { opacity: 1; transform: translateY(0); }
-    from { opacity: 0; transform: translateY(10px); }
-  }
-
-  .tf-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-  }
-
-  .tf-name {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--gold);
-    letter-spacing: 1px;
-  }
-
-  .trend-badge {
-    font-size: 11px;
+  .price-meta { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+  .badge {
+    font-size: 12px;
     font-weight: 600;
     padding: 3px 10px;
     border-radius: 20px;
-    letter-spacing: 0.5px;
   }
-
-  .trend-badge.up {
-    background: rgba(0,204,136,0.15);
-    color: var(--green);
-    border: 1px solid rgba(0,204,136,0.3);
-  }
-
-  .trend-badge.down {
-    background: rgba(255,68,102,0.15);
-    color: var(--red);
-    border: 1px solid rgba(255,68,102,0.3);
-  }
-
-  .trend-badge.neutral {
-    background: rgba(68,153,255,0.15);
-    color: var(--blue);
-    border: 1px solid rgba(68,153,255,0.3);
-  }
-
-  .indicators-row {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 8px;
-    flex-wrap: wrap;
-  }
-
-  .indicator-chip {
-    background: var(--bg2);
+  .badge.up { background: rgba(0,204,136,0.15); color: var(--green); border: 1px solid rgba(0,204,136,0.3); }
+  .badge.down { background: rgba(255,68,102,0.15); color: var(--red); border: 1px solid rgba(255,68,102,0.3); }
+  .badge.neutral { background: rgba(68,153,255,0.15); color: var(--blue); border: 1px solid rgba(68,153,255,0.3); }
+  .price-time { font-size: 11px; color: var(--text-dim); }
+  .tf-results { display: none; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+  .tf-results.show { display: flex; }
+  .tf-result-card {
+    background: var(--bg3);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 4px 10px;
-    font-size: 11px;
-    color: var(--text-dim);
+    border-radius: 12px;
+    padding: 14px;
+    border-left: 3px solid var(--border);
+    opacity: 0;
+    animation: slideIn 0.4s ease forwards;
   }
-
-  .indicator-chip span {
-    color: var(--text);
-    font-weight: 600;
-  }
-
-  .tf-summary {
-    font-size: 13px;
-    color: var(--text-dim);
-    line-height: 1.5;
-  }
-
-  /* Analysis Result */
+  .tf-result-card.up { border-left-color: var(--green); }
+  .tf-result-card.down { border-left-color: var(--red); }
+  .tf-result-card.neutral { border-left-color: var(--blue); }
+  @keyframes slideIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .tf-result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .tf-result-name { font-family: 'Rajdhani', sans-serif; font-size: 18px; font-weight: 700; color: var(--gold); }
+  .ind-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+  .ind-chip { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; font-size: 11px; color: var(--text-dim); }
+  .ind-chip b { color: var(--text); }
+  .tf-price-row { font-size: 12px; color: var(--text-dim); }
+  .tf-price-row b { color: var(--text); }
   .analysis-card {
+    display: none;
     background: var(--bg3);
     border: 1px solid var(--gold-dark);
     border-radius: 16px;
     padding: 20px;
-    margin-bottom: 16px;
-    display: none;
+    margin-bottom: 14px;
     position: relative;
     overflow: hidden;
   }
-
   .analysis-card::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
+    top: 0; left: 0; right: 0;
     height: 2px;
     background: linear-gradient(90deg, transparent, var(--gold), transparent);
   }
-
   .analysis-card.show { display: block; }
-
-  .analysis-card h3 {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 16px;
-    color: var(--gold);
-    margin-bottom: 16px;
-    letter-spacing: 1px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .signal-box {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 16px;
-  }
-
-  .signal-item {
-    flex: 1;
-    background: var(--bg2);
-    border-radius: 12px;
-    padding: 12px;
-    text-align: center;
-    border: 1px solid var(--border);
-  }
-
-  .signal-item .s-label {
-    font-size: 10px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 4px;
-  }
-
-  .signal-item .s-value {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 16px;
-    font-weight: 700;
-  }
-
-  .signal-item.entry .s-value { color: var(--blue); }
-  .signal-item.sl .s-value { color: var(--red); }
-  .signal-item.tp .s-value { color: var(--green); }
-
-  .analysis-text {
-    font-size: 13px;
-    line-height: 1.7;
-    color: var(--text);
+  .analysis-title { font-family: 'Rajdhani', sans-serif; font-size: 16px; color: var(--gold); letter-spacing: 1px; margin-bottom: 14px; }
+  .signal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  .signal-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 8px; text-align: center; }
+  .signal-box .s-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+  .signal-box .s-val { font-family: 'Rajdhani', sans-serif; font-size: 15px; font-weight: 700; }
+  .signal-box.entry .s-val { color: var(--blue); }
+  .signal-box.sl .s-val { color: var(--red); }
+  .signal-box.tp .s-val { color: var(--green); }
+  .analysis-body {
     background: var(--bg2);
     border-radius: 10px;
     padding: 14px;
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--text);
     border-left: 3px solid var(--gold-dark);
     white-space: pre-wrap;
+    word-break: break-word;
   }
-
-  /* Warning */
-  .warning {
-    background: rgba(255,68,102,0.08);
-    border: 1px solid rgba(255,68,102,0.2);
-    border-radius: 12px;
-    padding: 12px 16px;
-    font-size: 12px;
-    color: var(--text-dim);
-    text-align: center;
-    margin-bottom: 16px;
-    display: none;
-  }
-
-  .warning.show { display: block; }
-
-  /* Error */
-  .error-msg {
-    background: rgba(255,68,102,0.1);
-    border: 1px solid rgba(255,68,102,0.3);
-    border-radius: 12px;
-    padding: 14px;
-    color: var(--red);
-    font-size: 13px;
-    margin-bottom: 16px;
-    display: none;
-  }
-
-  .error-msg.show { display: block; }
-
-  /* Disclaimer */
-  .disclaimer {
-    text-align: center;
-    font-size: 11px;
-    color: var(--text-dim);
-    padding: 16px 0 24px;
-    line-height: 1.6;
-    border-top: 1px solid var(--border);
-    margin-top: 8px;
-  }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .error-box { display: none; background: rgba(255,68,102,0.1); border: 1px solid rgba(255,68,102,0.3); border-radius: 12px; padding: 14px; color: var(--red); font-size: 13px; margin-bottom: 14px; line-height: 1.5; }
+  .error-box.show { display: block; }
+  .warn-note { background: rgba(255,200,0,0.06); border: 1px solid rgba(255,200,0,0.15); border-radius: 10px; padding: 10px 14px; font-size: 11px; color: var(--text-dim); text-align: center; margin-bottom: 14px; }
+  .disclaimer { text-align: center; font-size: 11px; color: var(--text-dim); padding: 14px 0 24px; border-top: 1px solid var(--border); line-height: 1.7; }
 </style>
 </head>
 <body>
 <div class="container">
-
-  <!-- Header -->
   <div class="header">
-    <div class="header-left">
+    <div>
       <h1>⚡ GOLD AI</h1>
       <p>XAU/USD Multi-Timeframe Analyzer</p>
     </div>
-    <div class="live-badge">
-      <div class="live-dot"></div>
-      LIVE
-    </div>
+    <div class="live-dot"></div>
   </div>
 
-  <!-- API Setup -->
-  <div class="setup-card">
-    <h3>🔑 ตั้งค่า API Keys</h3>
-    <div class="input-group">
+  <div class="card" style="border-color: rgba(184,134,11,0.4);">
+    <div class="card-title">🔑 ตั้งค่า API Keys</div>
+    <div class="input-wrap">
       <label>Anthropic API Key</label>
       <input type="password" id="anthropicKey" placeholder="sk-ant-..." />
     </div>
-    <div class="input-group">
+    <div class="input-wrap">
       <label>Alpha Vantage API Key</label>
-      <input type="text" id="alphaKey" placeholder="ใส่ Alpha Vantage Key ที่นี่" />
+      <input type="text" id="alphaKey" placeholder="ใส่ Alpha Vantage Key" />
     </div>
-    <p style="font-size:11px;color:var(--text-dim);margin-top:8px;">⚠️ Key จะถูกเก็บในเครื่องคุณเท่านั้น ไม่ส่งไปไหน</p>
+    <div class="key-note">🔒 Key เก็บในเครื่องคุณเท่านั้น ไม่ถูกส่งไปที่อื่น</div>
   </div>
 
-  <!-- TF Selector -->
-  <div class="tf-selector">
-    <h3>เลือก Timeframe</h3>
-    <div class="tf-buttons">
-      <button class="tf-btn active" data-tf="60">H1</button>
-      <button class="tf-btn active" data-tf="30">M30</button>
-      <button class="tf-btn active" data-tf="15">M15</button>
-      <button class="tf-btn active" data-tf="5">M5</button>
+  <div class="card">
+    <div class="card-title">เลือก Timeframe</div>
+    <div class="tf-grid">
+      <button class="tf-btn active" data-tf="60" data-name="H1">H1</button>
+      <button class="tf-btn active" data-tf="30" data-name="M30">M30</button>
+      <button class="tf-btn active" data-tf="15" data-name="M15">M15</button>
+      <button class="tf-btn active" data-tf="5" data-name="M5">M5</button>
     </div>
   </div>
 
-  <!-- Analyze Button -->
-  <button class="analyze-btn" onclick="analyze()">
-    <div class="btn-shine"></div>
+  <button class="btn-analyze" id="analyzeBtn" onclick="analyze()">
     🔍 วิเคราะห์ทองตอนนี้
   </button>
 
-  <!-- Error -->
-  <div class="error-msg" id="errorMsg"></div>
+  <div class="error-box" id="errorBox"></div>
 
-  <!-- Loading -->
   <div class="loading" id="loading">
-    <div class="loading-spinner"></div>
-    <p id="loadingText">กำลังดึงข้อมูลทอง...</p>
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadingText">กำลังดึงข้อมูล...</div>
   </div>
 
-  <!-- Price Card -->
-  <div class="price-card" id="priceCard">
-    <div class="price-label">XAU/USD ราคาปัจจุบัน</div>
-    <div class="price-main">
-      <div class="price-value" id="currentPrice">-</div>
-      <div class="price-change" id="priceChange">-</div>
+  <div class="card price-display" id="priceCard">
+    <div class="card-title">XAU/USD ราคาปัจจุบัน</div>
+    <div class="price-big" id="priceVal">-</div>
+    <div class="price-meta">
+      <div class="badge" id="priceChangeBadge">-</div>
+      <div class="price-time" id="priceTime">-</div>
     </div>
-    <div style="font-size:12px;color:var(--text-dim)" id="priceTime">-</div>
   </div>
 
-  <!-- TF Results -->
   <div class="tf-results" id="tfResults"></div>
 
-  <!-- Analysis Card -->
   <div class="analysis-card" id="analysisCard">
-    <h3>🤖 AI วิเคราะห์</h3>
-    <div class="signal-box" id="signalBox"></div>
-    <div class="analysis-text" id="analysisText"></div>
+    <div class="analysis-title">🤖 AI วิเคราะห์โดย Claude</div>
+    <div class="signal-grid" id="signalGrid"></div>
+    <div class="analysis-body" id="analysisBody"></div>
   </div>
 
-  <!-- Warning -->
-  <div class="warning show">
-    ⚠️ ผลวิเคราะห์นี้ใช้ประกอบการตัดสินใจเท่านั้น ไม่ใช่คำแนะนำการลงทุน การเทรดมีความเสี่ยง
-  </div>
-
-  <!-- Disclaimer -->
-  <div class="disclaimer">
-    GOLD AI Analyzer • ข้อมูลจาก Alpha Vantage<br>
-    วิเคราะห์โดย Claude AI • ใช้เพื่อการศึกษาเท่านั้น
-  </div>
-
+  <div class="warn-note">⚠️ ผลวิเคราะห์ใช้ประกอบการตัดสินใจเท่านั้น ไม่ใช่คำแนะนำการลงทุน การเทรดมีความเสี่ยง</div>
+  <div class="disclaimer">GOLD AI Analyzer • ข้อมูลจาก Alpha Vantage<br>วิเคราะห์โดย Claude AI • ใช้เพื่อการศึกษาเท่านั้น</div>
 </div>
 
 <script>
-// TF button toggle
-document.querySelectorAll('.tf-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    btn.classList.toggle('active');
-  });
+document.querySelectorAll('.tf-btn').forEach(b => {
+  b.addEventListener('click', () => b.classList.toggle('active'));
 });
 
-// Save/load keys
 window.addEventListener('load', () => {
-  const ak = localStorage.getItem('anthropicKey');
-  const av = localStorage.getItem('alphaKey');
+  const ak = localStorage.getItem('gk_ant');
+  const av = localStorage.getItem('gk_av');
   if (ak) document.getElementById('anthropicKey').value = ak;
   if (av) document.getElementById('alphaKey').value = av;
 });
 
 function saveKeys() {
-  localStorage.setItem('anthropicKey', document.getElementById('anthropicKey').value);
-  localStorage.setItem('alphaKey', document.getElementById('alphaKey').value);
+  localStorage.setItem('gk_ant', document.getElementById('anthropicKey').value);
+  localStorage.setItem('gk_av', document.getElementById('alphaKey').value);
 }
 
 function showError(msg) {
-  const el = document.getElementById('errorMsg');
-  el.textContent = msg;
+  const el = document.getElementById('errorBox');
+  el.innerHTML = msg;
   el.classList.add('show');
 }
-
-function hideError() {
-  document.getElementById('errorMsg').classList.remove('show');
-}
-
-function setLoading(show, text = 'กำลังดึงข้อมูลทอง...') {
+function hideError() { document.getElementById('errorBox').classList.remove('show'); }
+function setLoading(show, txt) {
   document.getElementById('loading').classList.toggle('show', show);
-  document.getElementById('loadingText').textContent = text;
+  if (txt) document.getElementById('loadingText').textContent = txt;
 }
 
-// Calculate RSI
-function calcRSI(closes, period = 14) {
-  if (closes.length < period + 1) return null;
-  let gains = 0, losses = 0;
-  for (let i = closes.length - period; i < closes.length; i++) {
-    const diff = closes[i] - closes[i-1];
-    if (diff > 0) gains += diff;
-    else losses += Math.abs(diff);
+function calcRSI(arr, p = 14) {
+  if (arr.length < p + 1) return null;
+  let g = 0, l = 0;
+  for (let i = arr.length - p; i < arr.length; i++) {
+    const d = arr[i] - arr[i-1];
+    if (d > 0) g += d; else l += Math.abs(d);
   }
-  const avgGain = gains / period;
-  const avgLoss = losses / period;
-  if (avgLoss === 0) return 100;
-  const rs = avgGain / avgLoss;
-  return Math.round(100 - (100 / (1 + rs)));
+  const ag = g/p, al = l/p;
+  if (al === 0) return 100;
+  return Math.round(100 - 100/(1 + ag/al));
 }
 
-// Calculate EMA
-function calcEMA(data, period) {
-  const k = 2 / (period + 1);
-  let ema = data[0];
-  for (let i = 1; i < data.length; i++) {
-    ema = data[i] * k + ema * (1 - k);
+function calcEMA(arr, p) {
+  const k = 2/(p+1);
+  let ema = arr[0];
+  for (let i = 1; i < arr.length; i++) ema = arr[i]*k + ema*(1-k);
+  return Math.round(ema*100)/100;
+}
+
+function calcMACD(arr) {
+  if (arr.length < 26) return null;
+  const s = arr.slice(-26);
+  return Math.round((calcEMA(s,12) - calcEMA(s,26))*100)/100;
+}
+
+function getTrend(d) {
+  let b = 0, bear = 0;
+  if (d.rsi > 55) b++; else if (d.rsi < 45) bear++;
+  if (d.macd > 0) b++; else if (d.macd < 0) bear++;
+  if (d.ema20 && d.price > d.ema20) b++; else if (d.ema20 && d.price < d.ema20) bear++;
+  return b > bear ? 'up' : bear > b ? 'down' : 'neutral';
+}
+
+async function fetchTF(interval, avKey) {
+  const ivMap = {'5':'5min','15':'15min','30':'30min','60':'60min'};
+  const iv = ivMap[interval];
+
+  // Use GLD ETF as gold proxy (reliable on Alpha Vantage free tier)
+  const url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=GLD&interval=${iv}&outputsize=compact&apikey=${avKey}`;
+  const res = await fetch(url);
+  const json = await res.json();
+
+  if (json['Note'] || json['Information']) {
+    throw new Error('⏳ Alpha Vantage API limit — รอ 1 นาทีแล้วลองใหม่ครับ (ฟรี 25 ครั้ง/วัน)');
   }
-  return ema;
-}
 
-// Calculate MACD
-function calcMACD(closes) {
-  if (closes.length < 26) return null;
-  const ema12 = calcEMA(closes.slice(-26), 12);
-  const ema26 = calcEMA(closes.slice(-26), 26);
-  return Math.round((ema12 - ema26) * 100) / 100;
-}
-
-// Fetch gold data from Alpha Vantage
-async function fetchGoldData(interval, apiKey) {
-  const intervalMap = { '5': '5min', '15': '15min', '30': '30min', '60': '60min' };
-  const avInterval = intervalMap[interval];
-  
-  const url = `https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=XAU&to_symbol=USD&interval=${avInterval}&outputsize=compact&apikey=${apiKey}`;
-  
-  const response = await fetch(url);
-  const data = await response.json();
-  
-  const key = `Time Series FX (${avInterval})`;
-  if (!data[key]) {
-    if (data['Note']) throw new Error('Alpha Vantage API limit reached - รอ 1 นาทีแล้วลองใหม่');
-    if (data['Error Message']) throw new Error('Alpha Vantage: ไม่พบข้อมูล XAU/USD');
-    throw new Error('ไม่สามารถดึงข้อมูลได้ กรุณาตรวจสอบ Alpha Vantage API Key');
+  const key = `Time Series (${iv})`;
+  if (!json[key]) {
+    throw new Error('❌ ไม่สามารถดึงข้อมูลได้ กรุณาตรวจสอบ Alpha Vantage API Key ของคุณ');
   }
-  
-  const timeSeries = data[key];
-  const entries = Object.entries(timeSeries).sort((a, b) => new Date(a[0]) - new Date(b[0]));
-  
+
+  const entries = Object.entries(json[key]).sort((a,b) => new Date(a[0]) - new Date(b[0]));
   const closes = entries.map(e => parseFloat(e[1]['4. close']));
-  const latest = entries[entries.length - 1];
-  const prev = entries[entries.length - 2];
-  
+  const last = entries[entries.length-1];
+  const prev = entries[entries.length-2];
+
+  // GLD price x 10 = approximate XAU/USD price
+  const mult = 10;
+  const price = parseFloat(last[1]['4. close']) * mult;
+  const prevClose = parseFloat(prev[1]['4. close']) * mult;
+  const high = parseFloat(last[1]['2. high']) * mult;
+  const low = parseFloat(last[1]['3. low']) * mult;
+  const closesAdj = closes.map(c => c * mult);
+
   return {
-    closes,
-    currentPrice: parseFloat(latest[1]['4. close']),
-    open: parseFloat(latest[1]['1. open']),
-    high: parseFloat(latest[1]['2. high']),
-    low: parseFloat(latest[1]['3. low']),
-    prevClose: parseFloat(prev[1]['4. close']),
-    time: latest[0],
-    rsi: calcRSI(closes),
-    macd: calcMACD(closes),
-    ema20: closes.length >= 20 ? Math.round(calcEMA(closes.slice(-20), 20) * 100) / 100 : null,
-    ema50: closes.length >= 50 ? Math.round(calcEMA(closes.slice(-50), 50) * 100) / 100 : null,
+    price, prevClose, high, low,
+    time: last[0],
+    closes: closesAdj,
+    rsi: calcRSI(closesAdj),
+    macd: calcMACD(closesAdj),
+    ema20: closesAdj.length >= 20 ? calcEMA(closesAdj.slice(-20), 20) : null,
+    ema50: closesAdj.length >= 50 ? calcEMA(closesAdj.slice(-50), 50) : null,
   };
 }
 
-// Get trend from indicators
-function getTrend(data) {
-  let bullish = 0, bearish = 0;
-  if (data.rsi > 55) bullish++;
-  else if (data.rsi < 45) bearish++;
-  if (data.macd > 0) bullish++;
-  else if (data.macd < 0) bearish++;
-  if (data.ema20 && data.currentPrice > data.ema20) bullish++;
-  else if (data.ema20 && data.currentPrice < data.ema20) bearish++;
-  
-  if (bullish > bearish) return 'up';
-  if (bearish > bullish) return 'down';
-  return 'neutral';
-}
-
-// Render TF card
-function renderTFCard(tfName, data, index) {
-  const trend = getTrend(data);
-  const trendLabel = trend === 'up' ? '🟢 ขาขึ้น' : trend === 'down' ? '🔴 ขาลง' : '🔵 Sideways';
-  const change = data.currentPrice - data.prevClose;
-  const changePct = ((change / data.prevClose) * 100).toFixed(2);
-
+function renderTFCard(name, d, i) {
+  const tr = getTrend(d);
+  const chg = d.price - d.prevClose;
+  const pct = ((chg/d.prevClose)*100).toFixed(2);
+  const trl = tr==='up'?'🟢 ขาขึ้น':tr==='down'?'🔴 ขาลง':'🔵 Sideways';
   return `
-    <div class="tf-card ${trend === 'up' ? 'bullish' : trend === 'down' ? 'bearish' : 'neutral'}" 
-         style="animation-delay: ${index * 0.1}s">
-      <div class="tf-card-header">
-        <div class="tf-name">${tfName}</div>
-        <div class="trend-badge ${trend === 'up' ? 'up' : trend === 'down' ? 'down' : 'neutral'}">${trendLabel}</div>
+    <div class="tf-result-card ${tr}" style="animation-delay:${i*0.08}s">
+      <div class="tf-result-header">
+        <div class="tf-result-name">${name}</div>
+        <div class="badge ${tr}">${trl}</div>
       </div>
-      <div class="indicators-row">
-        ${data.rsi ? `<div class="indicator-chip">RSI <span>${data.rsi}</span></div>` : ''}
-        ${data.macd !== null ? `<div class="indicator-chip">MACD <span>${data.macd}</span></div>` : ''}
-        ${data.ema20 ? `<div class="indicator-chip">EMA20 <span>${data.ema20}</span></div>` : ''}
+      <div class="ind-row">
+        ${d.rsi!==null?`<div class="ind-chip">RSI <b>${d.rsi}</b></div>`:''}
+        ${d.macd!==null?`<div class="ind-chip">MACD <b>${d.macd}</b></div>`:''}
+        ${d.ema20?`<div class="ind-chip">EMA20 <b>${d.ema20}</b></div>`:''}
+        ${d.ema50?`<div class="ind-chip">EMA50 <b>${d.ema50}</b></div>`:''}
       </div>
-      <div class="tf-summary">
-        ราคา: <strong style="color:var(--gold)">${data.currentPrice.toFixed(2)}</strong> | 
-        H: ${data.high.toFixed(2)} | L: ${data.low.toFixed(2)} | 
-        เปลี่ยน: <span style="color:${change >= 0 ? 'var(--green)' : 'var(--red)'}">${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePct}%)</span>
+      <div class="tf-price-row">
+        ราคา: <b>${d.price.toFixed(2)}</b> | H: <b>${d.high.toFixed(2)}</b> L: <b>${d.low.toFixed(2)}</b> |
+        <span style="color:${chg>=0?'var(--green)':'var(--red)'}">${chg>=0?'+':''}${chg.toFixed(2)} (${pct}%)</span>
       </div>
-    </div>
-  `;
+    </div>`;
 }
 
-// Main analyze function
 async function analyze() {
   hideError();
-  
-  const anthropicKey = document.getElementById('anthropicKey').value.trim();
-  const alphaKey = document.getElementById('alphaKey').value.trim();
-  
-  if (!anthropicKey || !alphaKey) {
-    showError('❌ กรุณาใส่ API Key ทั้งสองตัวก่อนครับ');
-    return;
-  }
-  
+  const antKey = document.getElementById('anthropicKey').value.trim();
+  const avKey = document.getElementById('alphaKey').value.trim();
+
+  if (!antKey || !avKey) { showError('❌ กรุณาใส่ API Key ทั้งสองตัวก่อนครับ'); return; }
+
+  const activeTFs = [...document.querySelectorAll('.tf-btn.active')].map(b => ({tf:b.dataset.tf, name:b.dataset.name}));
+  if (!activeTFs.length) { showError('❌ กรุณาเลือก Timeframe อย่างน้อย 1 ตัว'); return; }
+
   saveKeys();
-  
-  const activeTFs = [...document.querySelectorAll('.tf-btn.active')].map(b => ({
-    tf: b.dataset.tf,
-    name: b.textContent
-  }));
-  
-  if (activeTFs.length === 0) {
-    showError('❌ กรุณาเลือก Timeframe อย่างน้อย 1 ตัวครับ');
-    return;
-  }
-  
-  document.querySelector('.analyze-btn').disabled = true;
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
   document.getElementById('priceCard').classList.remove('show');
   document.getElementById('tfResults').classList.remove('show');
   document.getElementById('analysisCard').classList.remove('show');
-  setLoading(true, 'กำลังดึงข้อมูลทอง...');
-  
+
   try {
-    // Fetch all TF data
-    const tfDataMap = {};
-    for (const { tf, name } of activeTFs) {
-      setLoading(true, `กำลังดึงข้อมูล ${name}...`);
-      const data = await fetchGoldData(tf, alphaKey);
-      tfDataMap[name] = data;
-      await new Promise(r => setTimeout(r, 500)); // rate limit
+    const tfData = {};
+    for (let i = 0; i < activeTFs.length; i++) {
+      const {tf, name} = activeTFs[i];
+      setLoading(true, `กำลังดึงข้อมูล ${name}... (${i+1}/${activeTFs.length})`);
+      tfData[name] = await fetchTF(tf, avKey);
+      if (i < activeTFs.length-1) await new Promise(r => setTimeout(r, 1500));
     }
-    
-    // Show price from highest TF
-    const firstData = tfDataMap[activeTFs[0].name];
-    const priceChange = firstData.currentPrice - firstData.prevClose;
-    const pricePct = ((priceChange / firstData.prevClose) * 100).toFixed(2);
-    
-    document.getElementById('currentPrice').textContent = firstData.currentPrice.toFixed(2);
-    const changeEl = document.getElementById('priceChange');
-    changeEl.textContent = `${priceChange >= 0 ? '+' : ''}${priceChange.toFixed(2)} (${pricePct}%)`;
-    changeEl.className = `price-change ${priceChange >= 0 ? 'up' : 'down'}`;
-    document.getElementById('priceTime').textContent = `อัปเดต: ${firstData.time} UTC`;
+
+    const first = tfData[activeTFs[0].name];
+    const chg = first.price - first.prevClose;
+    const pct = ((chg/first.prevClose)*100).toFixed(2);
+
+    document.getElementById('priceVal').textContent = first.price.toFixed(2);
+    const badge = document.getElementById('priceChangeBadge');
+    badge.textContent = `${chg>=0?'+':''}${chg.toFixed(2)} (${pct}%)`;
+    badge.className = `badge ${chg>=0?'up':'down'}`;
+    document.getElementById('priceTime').textContent = `อัปเดต: ${first.time} UTC`;
     document.getElementById('priceCard').classList.add('show');
-    
-    // Render TF cards
+
     const tfContainer = document.getElementById('tfResults');
-    tfContainer.innerHTML = activeTFs.map(({ name }, i) => 
-      renderTFCard(name, tfDataMap[name], i)
-    ).join('');
+    tfContainer.innerHTML = activeTFs.map(({name},i) => renderTFCard(name, tfData[name], i)).join('');
     tfContainer.classList.add('show');
-    
-    // Prepare data for Claude
-    setLoading(true, 'AI กำลังวิเคราะห์...');
-    
-    const tfSummary = activeTFs.map(({ name }) => {
-      const d = tfDataMap[name];
-      const trend = getTrend(d);
-      return `
-[${name}]
-- ราคา: ${d.currentPrice.toFixed(2)} | High: ${d.high.toFixed(2)} | Low: ${d.low.toFixed(2)}
-- RSI(14): ${d.rsi || 'N/A'}
-- MACD: ${d.macd || 'N/A'}
-- EMA20: ${d.ema20 || 'N/A'} | EMA50: ${d.ema50 || 'N/A'}
-- แนวโน้ม: ${trend === 'up' ? 'ขาขึ้น' : trend === 'down' ? 'ขาลง' : 'Sideways'}`;
-    }).join('\n');
-    
-    const prompt = `คุณเป็นนักวิเคราะห์ Forex ผู้เชี่ยวชาญ วิเคราะห์ทอง XAU/USD จากข้อมูลต่อไปนี้:
 
-${tfSummary}
+    setLoading(true, '🤖 AI กำลังวิเคราะห์...');
 
-กรุณาวิเคราะห์แบบละเอียดและให้:
-1. สรุปแนวโน้มรวม (Bull/Bear/Sideways) พร้อมเหตุผล
-2. จุด Entry ที่แนะนำ (ราคา)
-3. Stop Loss (SL) ที่เหมาะสม
-4. Take Profit (TP1, TP2, TP3)
-5. ระดับความเสี่ยง (ต่ำ/กลาง/สูง)
-6. คำแนะนำเพิ่มเติมสำหรับการเทรดครั้งนี้
+    const summary = activeTFs.map(({name}) => {
+      const d = tfData[name];
+      const tr = getTrend(d);
+      const chg = d.price - d.prevClose;
+      return `[${name}]
+ราคา: ${d.price.toFixed(2)} | High: ${d.high.toFixed(2)} | Low: ${d.low.toFixed(2)} | เปลี่ยน: ${chg>=0?'+':''}${chg.toFixed(2)}
+RSI: ${d.rsi??'N/A'} | MACD: ${d.macd??'N/A'} | EMA20: ${d.ema20??'N/A'} | EMA50: ${d.ema50??'N/A'}
+แนวโน้ม: ${tr==='up'?'ขาขึ้น':tr==='down'?'ขาลง':'Sideways'}`;
+    }).join('\n\n');
 
-ตอบเป็นภาษาไทย กระชับ ชัดเจน เน้นข้อมูลที่เป็นประโยชน์ต่อการเทรด`;
+    const prompt = `คุณเป็นนักวิเคราะห์ Forex เชี่ยวชาญทอง XAU/USD วิเคราะห์ข้อมูลต่อไปนี้:
 
-    // Call Claude API
+${summary}
+
+กรุณาวิเคราะห์และให้ข้อมูล:
+1. สรุปภาพรวม Trend และเหตุผล
+2. Entry Point ที่แนะนำ (ระบุราคา)
+3. Stop Loss (SL) ที่เหมาะสม (ระบุราคา)
+4. Take Profit: TP1, TP2, TP3 (ระบุราคา)
+5. ระดับความเสี่ยง และ Risk:Reward
+6. คำแนะนำสำคัญเพิ่มเติม
+
+ตอบเป็นภาษาไทย กระชับ ชัดเจน`;
+
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': anthropicKey,
+        'x-api-key': antKey,
         'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
+        messages: [{role:'user', content:prompt}]
       })
     });
-    
+
     if (!claudeRes.ok) {
-      const err = await claudeRes.json();
-      throw new Error(`Claude API: ${err.error?.message || 'ไม่สามารถเชื่อมต่อได้'}`);
+      const err = await claudeRes.json().catch(()=>({}));
+      throw new Error(`❌ Claude API: ${err?.error?.message||'ตรวจสอบ Anthropic API Key'}`);
     }
-    
-    const claudeData = await claudeRes.json();
-    const analysisText = claudeData.content[0].text;
-    
-    // Parse entry/sl/tp from text
-    const entryMatch = analysisText.match(/Entry[:\s]+([0-9,\.]+)/i);
-    const slMatch = analysisText.match(/SL[:\s]+([0-9,\.]+)/i);
-    const tp1Match = analysisText.match(/TP1[:\s]+([0-9,\.]+)/i);
-    
-    // Render signal boxes
-    document.getElementById('signalBox').innerHTML = `
-      <div class="signal-item entry">
-        <div class="s-label">Entry</div>
-        <div class="s-value">${entryMatch ? entryMatch[1] : firstData.currentPrice.toFixed(0)}</div>
-      </div>
-      <div class="signal-item sl">
-        <div class="s-label">Stop Loss</div>
-        <div class="s-value">${slMatch ? slMatch[1] : '-'}</div>
-      </div>
-      <div class="signal-item tp">
-        <div class="s-label">TP1</div>
-        <div class="s-value">${tp1Match ? tp1Match[1] : '-'}</div>
-      </div>
-    `;
-    
-    document.getElementById('analysisText').textContent = analysisText;
+
+    const claudeJson = await claudeRes.json();
+    const text = claudeJson.content?.[0]?.text || '';
+
+    const entryM = text.match(/Entry[^:]*:\s*([0-9,\.]+)/i);
+    const slM = text.match(/SL[^:]*:\s*([0-9,\.]+)/i);
+    const tp1M = text.match(/TP1[^:]*:\s*([0-9,\.]+)/i);
+
+    document.getElementById('signalGrid').innerHTML = `
+      <div class="signal-box entry"><div class="s-label">Entry</div><div class="s-val">${entryM?entryM[1]:first.price.toFixed(0)}</div></div>
+      <div class="signal-box sl"><div class="s-label">Stop Loss</div><div class="s-val">${slM?slM[1]:'-'}</div></div>
+      <div class="signal-box tp"><div class="s-label">TP1</div><div class="s-val">${tp1M?tp1M[1]:'-'}</div></div>`;
+
+    document.getElementById('analysisBody').textContent = text;
     document.getElementById('analysisCard').classList.add('show');
-    
     setLoading(false);
-    
-  } catch (err) {
+
+  } catch(err) {
     setLoading(false);
-    showError(`❌ ${err.message}`);
+    showError(err.message);
   } finally {
-    document.querySelector('.analyze-btn').disabled = false;
+    btn.disabled = false;
   }
 }
 </script>
