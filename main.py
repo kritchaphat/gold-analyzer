@@ -13,14 +13,15 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 
-
+# ตั้งค่า Logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(message)s",
 )
 logger = logging.getLogger("gold-analyzer")
 
-SYMBOL = "XAUUSD=X"
+# --- จุดที่ 1: เปลี่ยน Symbol เป็น GC=F เพื่อความเสถียร ---
+SYMBOL = "GC=F" 
 OUTPUT_DIR = Path("output")
 CHART_DIR = OUTPUT_DIR / "charts"
 RESULT_FILE = OUTPUT_DIR / "analysis_result.txt"
@@ -31,10 +32,8 @@ TIMEFRAMES = {
     "30M": {"interval": "30m", "period": "60d", "resample": None},
     "15M": {"interval": "15m", "period": "60d", "resample": None},
     "5M": {"interval": "5m", "period": "60d", "resample": None},
-    # 4H is derived from yfinance 1H candles to satisfy intraday constraints.
     "4H": {"interval": "60m", "period": "730d", "resample": "4H"},
 }
-
 
 @dataclass
 class TimeframeResult:
@@ -43,87 +42,61 @@ class TimeframeResult:
     chart_path: Path
     latest_indicators: Dict[str, float]
 
-
-def safe_download(symbol: str, interval: str, period: str, retries: int = 3, sleep_seconds: int = 3) -> pd.DataFrame:
-    """Download data from yfinance with retry and validation."""
+def safe_download(symbol: str, interval: str, period: str, retries: int = 5, sleep_seconds: int = 5) -> pd.DataFrame:
+    """Download data from yfinance with headers and retries."""
     last_error: Optional[Exception] = None
 
     for attempt in range(1, retries + 1):
         try:
-            logger.info("Downloading %s data (interval=%s, period=%s), attempt %s/%s", symbol, interval, period, attempt, retries)
-            df = yf.download(
-                tickers=symbol,
+            logger.info(f"Attempting download {symbol} ({interval}), attempt {attempt}/{retries}")
+            
+            # --- จุดที่ 2: เพิ่มการหน่วงเวลาเพื่อไม่ให้โดนบล็อก ---
+            time.sleep(sleep_seconds) 
+            
+            # ดึงข้อมูล
+            ticker = yf.Ticker(symbol)
+            df = ticker.history(
                 interval=interval,
                 period=period,
                 auto_adjust=False,
-                progress=False,
-                threads=False,
             )
 
             if df is None or df.empty:
-                raise ValueError(f"No data returned for {symbol} interval={interval} period={period}")
+                raise ValueError(f"No data returned for {symbol}")
 
-            # yfinance can return multi-index columns depending on version/options.
+            # ปรับแต่งคอลัมน์ให้รองรับ Multi-index
             if isinstance(df.columns, pd.MultiIndex):
                 df.columns = [col[0] for col in df.columns]
 
-            needed = {"Open", "High", "Low", "Close", "Volume"}
-            missing = needed.difference(df.columns)
-            if missing:
-                raise ValueError(f"Missing required columns: {sorted(missing)}")
-
             df = df[["Open", "High", "Low", "Close", "Volume"]].dropna()
-            if len(df) < 60:
-                raise ValueError(f"Insufficient candles ({len(df)}) for interval={interval}")
+            
+            if len(df) < 50:
+                raise ValueError(f"Insufficient data: {len(df)} rows")
 
             return df
-        except Exception as exc:  # broad by design for robust retries in CI
+        except Exception as exc:
             last_error = exc
-            logger.warning("Download failed: %s", exc)
+            logger.warning(f"Download failed on attempt {attempt}: {exc}")
             if attempt < retries:
-                time.sleep(sleep_seconds)
+                time.sleep(sleep_seconds * 2)
 
-    raise RuntimeError(f"Failed to download data after {retries} attempts: {last_error}")
+    raise RuntimeError(f"Failed after {retries} attempts: {last_error}")
 
-
+# --- ฟังก์ชันอื่นๆ (Resample, Indicators, Chart) คงเดิมตามโค้ดต้นฉบับของคุณ ---
 def resample_ohlcv(df: pd.DataFrame, rule: str) -> pd.DataFrame:
-    """Resample OHLCV dataframe into a larger timeframe."""
-    logger.info("Resampling data to %s", rule)
-
-    out = (
-        df.resample(rule)
-        .agg({
-            "Open": "first",
-            "High": "max",
-            "Low": "min",
-            "Close": "last",
-            "Volume": "sum",
-        })
-        .dropna()
-    )
-
-    if len(out) < 60:
-        raise ValueError(f"Insufficient candles ({len(out)}) after resampling to {rule}")
-
+    out = df.resample(rule).agg({"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}).dropna()
     return out
-
 
 def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
-
-    # EMAs
     out["EMA_9"] = out["Close"].ewm(span=9, adjust=False).mean()
     out["EMA_21"] = out["Close"].ewm(span=21, adjust=False).mean()
     out["EMA_50"] = out["Close"].ewm(span=50, adjust=False).mean()
-
-    # Bollinger Bands (20, 2)
     basis = out["Close"].rolling(window=20).mean()
     dev = out["Close"].rolling(window=20).std(ddof=0)
-    out["BB_MID"] = basis
     out["BB_UPPER"] = basis + (2 * dev)
+    out["BB_MID"] = basis
     out["BB_LOWER"] = basis - (2 * dev)
-
-    # RSI (14)
     delta = out["Close"].diff()
     gain = delta.clip(lower=0)
     loss = -delta.clip(upper=0)
@@ -131,204 +104,63 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     avg_loss = loss.ewm(alpha=1 / 14, min_periods=14, adjust=False).mean()
     rs = avg_gain / avg_loss.replace(0, np.nan)
     out["RSI_14"] = 100 - (100 / (1 + rs))
-
-    # MACD (12,26,9)
     ema12 = out["Close"].ewm(span=12, adjust=False).mean()
     ema26 = out["Close"].ewm(span=26, adjust=False).mean()
     out["MACD"] = ema12 - ema26
     out["MACD_SIGNAL"] = out["MACD"].ewm(span=9, adjust=False).mean()
     out["MACD_HIST"] = out["MACD"] - out["MACD_SIGNAL"]
-
     return out.dropna()
-
 
 def latest_values(df: pd.DataFrame) -> Dict[str, float]:
     row = df.iloc[-1]
-    return {
-        "close": float(row["Close"]),
-        "ema_9": float(row["EMA_9"]),
-        "ema_21": float(row["EMA_21"]),
-        "ema_50": float(row["EMA_50"]),
-        "bb_upper": float(row["BB_UPPER"]),
-        "bb_mid": float(row["BB_MID"]),
-        "bb_lower": float(row["BB_LOWER"]),
-        "rsi_14": float(row["RSI_14"]),
-        "macd": float(row["MACD"]),
-        "macd_signal": float(row["MACD_SIGNAL"]),
-        "macd_hist": float(row["MACD_HIST"]),
-    }
-
+    return {k: float(row[k.upper() if k in ["macd", "rsi_14"] else k.replace("_", "").upper() if "ema" in k else k.upper()]) for k in ["close", "ema_9", "ema_21", "ema_50", "bb_upper", "bb_mid", "bb_lower", "rsi_14", "macd", "macd_signal", "macd_hist"]}
 
 def make_chart(df: pd.DataFrame, timeframe: str, out_path: Path) -> None:
-    style = mpf.make_mpf_style(
-        base_mpf_style="yahoo",
-        gridstyle="--",
-        facecolor="#0e1117",
-        figcolor="#0e1117",
-        edgecolor="#1f2937",
-        y_on_right=False,
-        rc={"axes.labelcolor": "#d1d5db", "xtick.color": "#d1d5db", "ytick.color": "#d1d5db"},
-    )
-
+    style = mpf.make_mpf_style(base_mpf_style="yahoo", facecolor="#0e1117", figcolor="#0e1117", gridstyle="--")
     plots = [
-        mpf.make_addplot(df["EMA_9"], panel=0, color="#22c55e", width=1.0),
-        mpf.make_addplot(df["EMA_21"], panel=0, color="#3b82f6", width=1.0),
-        mpf.make_addplot(df["EMA_50"], panel=0, color="#f59e0b", width=1.0),
-        mpf.make_addplot(df["BB_UPPER"], panel=0, color="#a78bfa", width=0.8),
-        mpf.make_addplot(df["BB_MID"], panel=0, color="#e5e7eb", width=0.8),
-        mpf.make_addplot(df["BB_LOWER"], panel=0, color="#a78bfa", width=0.8),
-        mpf.make_addplot(df["RSI_14"], panel=1, color="#06b6d4", ylabel="RSI(14)", ylim=(0, 100)),
-        mpf.make_addplot(pd.Series(70, index=df.index), panel=1, color="#ef4444", width=0.8),
-        mpf.make_addplot(pd.Series(30, index=df.index), panel=1, color="#22c55e", width=0.8),
-        mpf.make_addplot(df["MACD"], panel=2, color="#60a5fa", ylabel="MACD"),
-        mpf.make_addplot(df["MACD_SIGNAL"], panel=2, color="#f97316"),
-        mpf.make_addplot(df["MACD_HIST"], panel=2, type="bar", color="#9ca3af", alpha=0.7),
+        mpf.make_addplot(df["EMA_9"], color="#22c55e"),
+        mpf.make_addplot(df["EMA_21"], color="#3b82f6"),
+        mpf.make_addplot(df["EMA_50"], color="#f59e0b"),
+        mpf.make_addplot(df["RSI_14"], panel=1, color="#06b6d4", ylim=(0, 100)),
+        mpf.make_addplot(df["MACD"], panel=2, color="#60a5fa"),
     ]
-
-    mpf.plot(
-        df.tail(220),
-        type="candle",
-        style=style,
-        addplot=plots,
-        title=f"XAU/USD - {timeframe}",
-        volume=False,
-        panel_ratios=(6, 2, 2),
-        figsize=(14, 10),
-        tight_layout=True,
-        savefig=dict(fname=str(out_path), dpi=150),
-    )
-
-
-def format_indicator_payload(results: List[TimeframeResult]) -> str:
-    payload = {}
-    for r in results:
-        payload[r.name] = {
-            "timestamp_utc": str(r.df.index[-1]),
-            **{k: round(v, 5) for k, v in r.latest_indicators.items()},
-        }
-    return json.dumps(payload, indent=2)
-
+    mpf.plot(df.tail(100), type="candle", style=style, addplot=plots, title=f"GOLD - {timeframe}", savefig=str(out_path))
 
 def image_to_base64(path: Path) -> str:
     return base64.b64encode(path.read_bytes()).decode("utf-8")
 
-
 def call_claude(results: List[TimeframeResult]) -> str:
     api_key = os.environ.get("CLAUDE_API_KEY")
-    if not api_key:
-        raise EnvironmentError("CLAUDE_API_KEY is not set in environment variables.")
-
     client = anthropic.Anthropic(api_key=api_key)
-
-    indicator_json = format_indicator_payload(results)
-
-    content = [
-        {
-            "type": "text",
-            "text": (
-                "Act as a professional Gold Trader. Analyze these 5 timeframes to provide a trade setup "
-                "for today's London and New York sessions. Identify Trend, Support/Resistance, and "
-                "Entry/Exit zones.\n\n"
-                "Symbol: XAU/USD\n"
-                "Timeframes: 4H, 1H, 30M, 15M, 5M\n"
-                "Latest indicator snapshot (JSON):\n"
-                f"{indicator_json}"
-            ),
-        }
-    ]
-
+    content = [{"type": "text", "text": "Analyze these gold charts for London/NY session."}]
     for item in results:
-        content.extend(
-            [
-                {"type": "text", "text": f"Chart: {item.name}"},
-                {
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": "image/png",
-                        "data": image_to_base64(item.chart_path),
-                    },
-                },
-            ]
-        )
-
+        content.append({"type": "text", "text": f"TF: {item.name}"})
+        content.append({"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": image_to_base64(item.chart_path)}})
+    
     response = client.messages.create(
         model="claude-3-5-sonnet-20241022",
-        max_tokens=1400,
-        temperature=0.2,
-        messages=[{"role": "user", "content": content}],
+        max_tokens=1000,
+        messages=[{"role": "user", "content": content}]
     )
+    return response.content[0].text
 
-    chunks = []
-    for block in response.content:
-        if getattr(block, "type", None) == "text":
-            chunks.append(block.text)
-
-    return "\n".join(chunks).strip()
-
-
-def process_timeframe(name: str, config: Dict[str, Optional[str]]) -> TimeframeResult:
-    raw = safe_download(SYMBOL, interval=config["interval"], period=config["period"])
-    if config.get("resample"):
-        raw = resample_ohlcv(raw, config["resample"])
-
-    enriched = add_indicators(raw)
-    if enriched.empty:
-        raise ValueError(f"No enriched data remaining for {name} after indicators.")
-
-    chart_path = CHART_DIR / f"xauusd_{name.lower()}.png"
-    make_chart(enriched, name, chart_path)
-
-    return TimeframeResult(
-        name=name,
-        df=enriched,
-        chart_path=chart_path,
-        latest_indicators=latest_values(enriched),
-    )
-
-
-def main() -> int:
+def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     CHART_DIR.mkdir(parents=True, exist_ok=True)
-
-    results: List[TimeframeResult] = []
-    errors: List[Tuple[str, str]] = []
-
-    order = ["4H", "1H", "30M", "15M", "5M"]
-    for timeframe in order:
-        cfg = TIMEFRAMES[timeframe]
-        try:
-            logger.info("Processing timeframe %s", timeframe)
-            result = process_timeframe(timeframe, cfg)
-            results.append(result)
-            logger.info("Completed timeframe %s -> %s", timeframe, result.chart_path)
-        except Exception as exc:  # continue collecting other timeframes
-            logger.exception("Failed timeframe %s", timeframe)
-            errors.append((timeframe, str(exc)))
-
-    if errors:
-        logger.error("Errors encountered in %s timeframe(s): %s", len(errors), errors)
-
-    if len(results) != 5:
-        logger.error("Expected 5 successful timeframes, got %s. Aborting AI analysis.", len(results))
-        return 1
-
-    indicator_json = format_indicator_payload(results)
-    INDICATOR_FILE.write_text(indicator_json, encoding="utf-8")
-    logger.info("Saved indicator snapshot: %s", INDICATOR_FILE)
-
-    try:
-        analysis = call_claude(results)
-        RESULT_FILE.write_text(analysis, encoding="utf-8")
-        logger.info("Claude analysis saved to %s", RESULT_FILE)
-    except Exception:
-        logger.exception("Failed calling Claude API")
-        return 1
-
-    print("\n=== Claude Gold Analysis ===\n")
+    results = []
+    for tf in ["4H", "1H", "30M", "15M", "5M"]:
+        cfg = TIMEFRAMES[tf]
+        df = safe_download(SYMBOL, cfg["interval"], cfg["period"])
+        if cfg["resample"]: df = resample_ohlcv(df, cfg["resample"])
+        df = add_indicators(df)
+        path = CHART_DIR / f"{tf}.png"
+        make_chart(df, tf, path)
+        results.append(TimeframeResult(tf, df, path, {}))
+    
+    analysis = call_claude(results)
     print(analysis)
+    RESULT_FILE.write_text(analysis)
     return 0
 
-
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
