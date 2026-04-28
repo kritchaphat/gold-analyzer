@@ -18,7 +18,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pandas yfinance matplotlib anthropic
+          pip install pandas yfinance matplotlib anthropic mplfinance
 
       - name: Run Analysis
         env:
