@@ -1,0 +1,6 @@
+antropic>=0.39.0
+matplotlib>=3.8.0
+mplfinance>=0.12.10b0
+numpy>=1.26.0
+pandas>=2.2.0
+yfinance>=0.2.54
