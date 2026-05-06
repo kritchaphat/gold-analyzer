@@ -18,7 +18,10 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pandas yfinance matplotlib anthropic mplfinance
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          # กรณีกันเหนียว: ถ้าหาไฟล์ไม่เจอ ให้ติดตั้งตัวหลักที่ Mini-Kronos ต้องใช้
+          pip install pandas pandas-ta yfinance anthropic
 
       - name: Run Analysis
         env:
