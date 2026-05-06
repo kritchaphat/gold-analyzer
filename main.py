@@ -19,7 +19,7 @@ class TimeframeResult:
 
 def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
-    # 1. คำนวณ ATR แบบ Manual (สูตรมาตรฐาน Kronos)
+    # 1. คำนวณ ATR แบบ Manual (สูตรมาตรฐาน)
     high_low = df['High'] - df['Low']
     high_close = (df['High'] - df['Close'].shift()).abs()
     low_close = (df['Low'] - df['Close'].shift()).abs()
@@ -41,7 +41,9 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
 
 def call_claude(results: List[TimeframeResult]) -> str:
     api_key = os.environ.get("CLAUDE_API_KEY")
-    if not api_key: return "Error: No API Key"
+    if not api_key: return "Error: No API Key found in Environment"
+    
+    # ใช้ Model ตัวล่าสุดที่ระบบรองรับชัวร์ๆ
     client = anthropic.Anthropic(api_key=api_key)
     
     summary = ""
@@ -52,8 +54,9 @@ def call_claude(results: List[TimeframeResult]) -> str:
 
     prompt = f"Act as Mini-Kronos Gold Expert. Analyze these sequences & indicators: {summary}\nProvide: 1. Bias 2. 3-Scenarios with % 3. Trade Plan (Entry/SL/TP)."
     
+    # แก้ไขชื่อ Model เป็นรุ่นล่าสุด
     res = client.messages.create(
-        model="claude-3-5-sonnet-20241022",
+        model="claude-3-5-sonnet-latest",
         max_tokens=1000,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -61,17 +64,28 @@ def call_claude(results: List[TimeframeResult]) -> str:
 
 def main():
     OUTPUT_DIR.mkdir(exist_ok=True)
+    # ปรับเป็นตัวเล็ก h ตามคำแนะนำของระบบใหม่
     tfs = {"4H": "4h", "1H": "1h", "15M": "15m"}
     results = []
+    
     for name, interval in tfs.items():
+        print(f"Fetching data for {name}...")
         df = yf.Ticker(SYMBOL).history(period="60d", interval="60m" if "H" in name else "15m")
-        if name == "4H": df = df.resample('4H').agg({'Open':'first','High':'max','Low':'min','Close':'last','Volume':'sum'})
+        
+        # ปรับ Resample เป็นตัวเล็ก 4h
+        if name == "4H": 
+            df = df.resample('4h').agg({'Open':'first','High':'max','Low':'min','Close':'last','Volume':'sum'})
+            
         df = add_indicators(df)
         results.append(TimeframeResult(name, df))
     
+    print("Calling Claude for Analysis...")
     analysis = call_claude(results)
+    print("\n--- ANALYSIS RESULT ---")
     print(analysis)
+    
     RESULT_FILE.write_text(analysis, encoding="utf-8")
+    print(f"\nSaved to {RESULT_FILE}")
 
 if __name__ == "__main__":
     main()
