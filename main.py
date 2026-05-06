@@ -43,7 +43,7 @@ def call_claude(results: List[TimeframeResult]) -> str:
     api_key = os.environ.get("CLAUDE_API_KEY")
     if not api_key: return "Error: No API Key found in Environment"
     
-    # ใช้ Model ตัวล่าสุดที่ระบบรองรับชัวร์ๆ
+    # ใช้ Model ตัวมาตรฐานที่รองรับทุกบัญชี (Stable Version)
     client = anthropic.Anthropic(api_key=api_key)
     
     summary = ""
@@ -54,9 +54,9 @@ def call_claude(results: List[TimeframeResult]) -> str:
 
     prompt = f"Act as Mini-Kronos Gold Expert. Analyze these sequences & indicators: {summary}\nProvide: 1. Bias 2. 3-Scenarios with % 3. Trade Plan (Entry/SL/TP)."
     
-    # แก้ไขชื่อ Model เป็นรุ่นล่าสุด
+    # แก้ไขชื่อ Model เป็นรุ่นมาตรฐานที่เข้าถึงได้แน่นอน
     res = client.messages.create(
-        model="claude-3-5-sonnet-latest",
+        model="claude-3-sonnet-20240229",
         max_tokens=1000,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -64,15 +64,16 @@ def call_claude(results: List[TimeframeResult]) -> str:
 
 def main():
     OUTPUT_DIR.mkdir(exist_ok=True)
-    # ปรับเป็นตัวเล็ก h ตามคำแนะนำของระบบใหม่
+    # ปรับเป็นตัวเล็ก h ตามมาตรฐาน yfinance ล่าสุด
     tfs = {"4H": "4h", "1H": "1h", "15M": "15m"}
     results = []
     
     for name, interval in tfs.items():
         print(f"Fetching data for {name}...")
+        # ดึงข้อมูลจาก yfinance
         df = yf.Ticker(SYMBOL).history(period="60d", interval="60m" if "H" in name else "15m")
         
-        # ปรับ Resample เป็นตัวเล็ก 4h
+        # จัดการ Resample สำหรับ 4h
         if name == "4H": 
             df = df.resample('4h').agg({'Open':'first','High':'max','Low':'min','Close':'last','Volume':'sum'})
             
@@ -81,9 +82,11 @@ def main():
     
     print("Calling Claude for Analysis...")
     analysis = call_claude(results)
+    
     print("\n--- ANALYSIS RESULT ---")
     print(analysis)
     
+    # บันทึกผลลัพธ์ลงไฟล์
     RESULT_FILE.write_text(analysis, encoding="utf-8")
     print(f"\nSaved to {RESULT_FILE}")
 
