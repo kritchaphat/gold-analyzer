@@ -1,5 +1,4 @@
 import os
-import time
 import anthropic
 import pandas as pd
 import yfinance as yf
@@ -8,7 +7,7 @@ from pathlib import Path
 from typing import List
 
 # --- SETTINGS ---
-SYMBOL = "GC=F"
+SYMBOL = "GC=F" # Gold Futures (XAU/USD)
 OUTPUT_DIR = Path("output")
 RESULT_FILE = OUTPUT_DIR / "analysis_result.txt"
 
@@ -19,76 +18,143 @@ class TimeframeResult:
 
 def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
-    # 1. คำนวณ ATR แบบ Manual (สูตรมาตรฐาน)
+    
+    # 1. ATR (ใช้หา SL/TP)
     high_low = df['High'] - df['Low']
     high_close = (df['High'] - df['Close'].shift()).abs()
     low_close = (df['Low'] - df['Close'].shift()).abs()
     df['TR'] = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-    df['ATR'] = df['TR'].rolling(window=14).mean()
-
-    # 2. คำนวณ EMA แบบ Manual
+    df['ATR'] = df['TR'].rolling(14).mean()
+    
+    # 2. EMA 3 เส้น (Trend Analysis)
+    df['EMA_9']  = df['Close'].ewm(span=9,  adjust=False).mean()
     df['EMA_21'] = df['Close'].ewm(span=21, adjust=False).mean()
     df['EMA_50'] = df['Close'].ewm(span=50, adjust=False).mean()
-
-    # 3. คำนวณ RSI แบบ Manual
+    
+    # 3. RSI
     delta = df['Close'].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-    rs = gain / loss
-    df['RSI_14'] = 100 - (100 / (1 + rs))
-
+    gain = (delta.where(delta > 0, 0)).rolling(14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+    df['RSI_14'] = 100 - (100 / (1 + gain / loss))
+    
+    # 4. MACD
+    ema12 = df['Close'].ewm(span=12, adjust=False).mean()
+    ema26 = df['Close'].ewm(span=26, adjust=False).mean()
+    df['MACD'] = ema12 - ema26
+    df['MACD_Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
+    df['MACD_Hist'] = df['MACD'] - df['MACD_Signal']
+    
+    # 5. Bollinger Bands
+    df['BB_Mid']   = df['Close'].rolling(20).mean()
+    df['BB_Std']   = df['Close'].rolling(20).std()
+    df['BB_Upper'] = df['BB_Mid'] + 2 * df['BB_Std']
+    df['BB_Lower'] = df['BB_Mid'] - 2 * df['BB_Std']
+    
     return df.dropna()
 
 def call_claude(results: List[TimeframeResult]) -> str:
     api_key = os.environ.get("CLAUDE_API_KEY")
-    if not api_key: return "Error: No API Key found in Environment"
+    if not api_key:
+        return "Error: No API Key found in Environment"
     
-    # ใช้ Model ตัวมาตรฐานที่รองรับทุกบัญชี (Stable Version)
     client = anthropic.Anthropic(api_key=api_key)
     
     summary = ""
     for r in results:
         last = r.df.iloc[-1]
-        seq = r.df['Close'].tail(10).round(2).tolist()
-        summary += f"\n[{r.name}]: Seq={seq}\nLast: C={last['Close']:.2f}, ATR={last['ATR']:.2f}, RSI={last['RSI_14']:.1f}\n"
-
-    prompt = f"Act as Mini-Kronos Gold Expert. Analyze these sequences & indicators: {summary}\nProvide: 1. Bias 2. 3-Scenarios with % 3. Trade Plan (Entry/SL/TP)."
+        
+        # Trend Detection Logic
+        ema_trend = "BULLISH" if last['EMA_9'] > last['EMA_21'] > last['EMA_50'] \
+                    else "BEARISH" if last['EMA_9'] < last['EMA_21'] < last['EMA_50'] \
+                    else "RANGING"
+        
+        # BB Position
+        bb_pos = "UPPER" if last['Close'] >= last['BB_Upper'] * 0.999 \
+                 else "LOWER" if last['Close'] <= last['BB_Lower'] * 1.001 \
+                 else "MID"
+        
+        # MACD Direction
+        macd_dir = "BULLISH" if last['MACD_Hist'] > 0 else "BEARISH"
+        
+        summary += f"""
+[{r.name}]
+Price  : {last['Close']:.2f}
+High   : {last['High']:.2f} | Low: {last['Low']:.2f}
+EMA    : 9={last['EMA_9']:.2f} | 21={last['EMA_21']:.2f} | 50={last['EMA_50']:.2f}
+RSI    : {last['RSI_14']:.1f}
+MACD   : {last['MACD']:.3f} | Signal={last['MACD_Signal']:.3f} | Hist={last['MACD_Hist']:.3f} ({macd_dir})
+BB     : Upper={last['BB_Upper']:.2f} | Lower={last['BB_Lower']:.2f} | Position={bb_pos}
+ATR    : {last['ATR']:.2f}
+Trend  : {ema_trend}
+"""
     
-    # แก้ไขชื่อ Model เป็นรุ่นมาตรฐานที่เข้าถึงได้แน่นอน
+    prompt = f"""You are a Senior XAU/USD Quantitative Strategist specializing in SMC, Order Blocks, and Liquidity Analysis.
+
+Analyze the following multi-timeframe data and provide a trade plan:
+
+{summary}
+
+Please provide:
+1. HTF Bias (H4 trend direction and reasoning)
+2. Liquidity Levels (potential BSL/SSL targets)
+3. Key Supply/Demand Zones (Order Blocks)
+4. Trade Setup:
+   - Direction: BUY / SELL / WAIT
+   - Entry Zone
+   - Stop Loss (based on ATR x 1.5)
+   - TP1 (ATR x 1.5) | TP2 (ATR x 3) | TP3 (ATR x 4.5)
+   - Risk:Reward
+5. Invalidation condition
+6. Session notes (London/NY timing)
+
+Keep response concise and professional."""
+
+    # อัปเดต Model Name ตามที่อาร์มต้องการ
     res = client.messages.create(
-        model="claude-3-sonnet-20240229",
-        max_tokens=1000,
+        model="claude-sonnet-4-20250514",
+        max_tokens=1024,
         messages=[{"role": "user", "content": prompt}]
     )
     return res.content[0].text
 
 def main():
     OUTPUT_DIR.mkdir(exist_ok=True)
-    # ปรับเป็นตัวเล็ก h ตามมาตรฐาน yfinance ล่าสุด
-    tfs = {"4H": "4h", "1H": "1h", "15M": "15m"}
+    # อัปเดต Timeframe ให้ครบ 4 ตัว
+    tfs = {"H4": "4h", "H1": "1h", "M30": "30m", "M15": "15m"}
     results = []
     
     for name, interval in tfs.items():
-        print(f"Fetching data for {name}...")
-        # ดึงข้อมูลจาก yfinance
-        df = yf.Ticker(SYMBOL).history(period="60d", interval="60m" if "H" in name else "15m")
+        print(f"Fetching {name}...")
+        ticker = yf.Ticker(SYMBOL)
+        # ปรับ Period เป็น 10d เพื่อให้ Indicator คำนวณได้แม่นยำขึ้น
+        df = ticker.history(period="10d", interval=interval)
         
-        # จัดการ Resample สำหรับ 4h
-        if name == "4H": 
-            df = df.resample('4h').agg({'Open':'first','High':'max','Low':'min','Close':'last','Volume':'sum'})
+        if df.empty:
+            print(f"No data for {name}")
+            continue
+            
+        if name == "H4":
+            # ปรับ Resample ให้เป็นมาตรฐาน 4h
+            df = df.resample('4h').agg({
+                'Open':'first','High':'max','Low':'min','Close':'last','Volume':'sum'
+            }).dropna()
             
         df = add_indicators(df)
         results.append(TimeframeResult(name, df))
     
-    print("Calling Claude for Analysis...")
+    if not results:
+        print("Error: Could not retrieve any data.")
+        return
+
+    print("Analyzing with Claude (SMC Framework)...")
     analysis = call_claude(results)
     
-    print("\n--- ANALYSIS RESULT ---")
+    print("\n" + "="*50)
     print(analysis)
+    print("="*50)
     
-    # บันทึกผลลัพธ์ลงไฟล์
     RESULT_FILE.write_text(analysis, encoding="utf-8")
-    print(f"\nSaved to {RESULT_FILE}")
+    print(f"\nAnalysis saved to {RESULT_FILE}")
 
 if __name__ == "__main__":
     main()
