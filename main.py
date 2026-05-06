@@ -63,17 +63,14 @@ def call_claude(results: List[TimeframeResult]) -> str:
     for r in results:
         last = r.df.iloc[-1]
         
-        # Trend Detection Logic
         ema_trend = "BULLISH" if last['EMA_9'] > last['EMA_21'] > last['EMA_50'] \
                     else "BEARISH" if last['EMA_9'] < last['EMA_21'] < last['EMA_50'] \
                     else "RANGING"
         
-        # BB Position
         bb_pos = "UPPER" if last['Close'] >= last['BB_Upper'] * 0.999 \
                  else "LOWER" if last['Close'] <= last['BB_Lower'] * 1.001 \
                  else "MID"
         
-        # MACD Direction
         macd_dir = "BULLISH" if last['MACD_Hist'] > 0 else "BEARISH"
         
         summary += f"""
@@ -109,9 +106,9 @@ Please provide:
 
 Keep response concise and professional."""
 
-    # อัปเดต Model Name ตามที่อาร์มต้องการ
+    # ใช้ชื่อ Model ล่าสุดที่เสถียรที่สุดในปัจจุบัน
     res = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-3-5-sonnet-latest",
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -119,22 +116,18 @@ Keep response concise and professional."""
 
 def main():
     OUTPUT_DIR.mkdir(exist_ok=True)
-    # อัปเดต Timeframe ให้ครบ 4 ตัว
     tfs = {"H4": "4h", "H1": "1h", "M30": "30m", "M15": "15m"}
     results = []
     
     for name, interval in tfs.items():
         print(f"Fetching {name}...")
         ticker = yf.Ticker(SYMBOL)
-        # ปรับ Period เป็น 10d เพื่อให้ Indicator คำนวณได้แม่นยำขึ้น
         df = ticker.history(period="10d", interval=interval)
         
         if df.empty:
-            print(f"No data for {name}")
             continue
             
         if name == "H4":
-            # ปรับ Resample ให้เป็นมาตรฐาน 4h
             df = df.resample('4h').agg({
                 'Open':'first','High':'max','Low':'min','Close':'last','Volume':'sum'
             }).dropna()
@@ -143,10 +136,10 @@ def main():
         results.append(TimeframeResult(name, df))
     
     if not results:
-        print("Error: Could not retrieve any data.")
+        print("Error: No data retrieved.")
         return
 
-    print("Analyzing with Claude (SMC Framework)...")
+    print("Analyzing with Claude 3.5 Sonnet (SMC Framework)...")
     analysis = call_claude(results)
     
     print("\n" + "="*50)
