@@ -89,7 +89,7 @@ def call_claude(results: List[TimeframeResult]) -> str:
 
 def main():
     OUTPUT_DIR.mkdir(exist_ok=True)
-    tfs = {"D1": "1d", "H4": "4h", "H1": "1h", "M30": "30m", "M15": "15m", "M5": "5m"}
+    tfs = {"H4": "4h", "H1": "1h", "M30": "30m", "M15": "15m", "M5": "5m"}
     results = []
     
     for name, interval in tfs.items():
