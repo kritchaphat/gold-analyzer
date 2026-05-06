@@ -19,7 +19,7 @@ class TimeframeResult:
 def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     
-    # 1. ATR (ใช้หา SL/TP)
+    # 1. ATR (หา SL/TP)
     high_low = df['High'] - df['Low']
     high_close = (df['High'] - df['Close'].shift()).abs()
     low_close = (df['Low'] - df['Close'].shift()).abs()
@@ -62,15 +62,12 @@ def call_claude(results: List[TimeframeResult]) -> str:
     summary = ""
     for r in results:
         last = r.df.iloc[-1]
-        
         ema_trend = "BULLISH" if last['EMA_9'] > last['EMA_21'] > last['EMA_50'] \
                     else "BEARISH" if last['EMA_9'] < last['EMA_21'] < last['EMA_50'] \
                     else "RANGING"
-        
         bb_pos = "UPPER" if last['Close'] >= last['BB_Upper'] * 0.999 \
                  else "LOWER" if last['Close'] <= last['BB_Lower'] * 1.001 \
                  else "MID"
-        
         macd_dir = "BULLISH" if last['MACD_Hist'] > 0 else "BEARISH"
         
         summary += f"""
@@ -85,29 +82,19 @@ Trend  : {ema_trend}
 """
     
     prompt = f"""You are a Senior XAU/USD Quantitative Strategist specializing in SMC, Order Blocks, and Liquidity Analysis.
-
 Analyze the following multi-timeframe data and provide a trade plan:
-
 {summary}
-
 Please provide:
 1. HTF Bias (H4 trend direction and reasoning)
 2. Liquidity Levels (potential BSL/SSL targets)
 3. Key Supply/Demand Zones (Order Blocks)
-4. Trade Setup:
-   - Direction: BUY / SELL / WAIT
-   - Entry Zone
-   - Stop Loss (based on ATR x 1.5)
-   - TP1 (ATR x 1.5) | TP2 (ATR x 3) | TP3 (ATR x 4.5)
-   - Risk:Reward
+4. Trade Setup: Direction, Entry, SL (ATR x 1.5), TP1, TP2, TP3
 5. Invalidation condition
-6. Session notes (London/NY timing)
-
 Keep response concise and professional."""
 
-    # เปลี่ยนกลับมาใช้ Specific Version ของ Sonnet 3.5
+    # อัปเดต Model Name ตามที่อาร์มขอจากรูปภาพ
     res = client.messages.create(
-        model="claude-3-5-sonnet-20240620",
+        model="claude-sonnet-4-20250514",
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -122,15 +109,11 @@ def main():
         print(f"Fetching {name}...")
         ticker = yf.Ticker(SYMBOL)
         df = ticker.history(period="10d", interval=interval)
-        
-        if df.empty:
-            continue
-            
+        if df.empty: continue
         if name == "H4":
             df = df.resample('4h').agg({
                 'Open':'first','High':'max','Low':'min','Close':'last','Volume':'sum'
             }).dropna()
-            
         df = add_indicators(df)
         results.append(TimeframeResult(name, df))
     
@@ -138,15 +121,10 @@ def main():
         print("Error: No data retrieved.")
         return
 
-    print("Analyzing with Claude (SMC Framework)...")
+    print(f"Analyzing with Claude Sonnet 4...")
     analysis = call_claude(results)
-    
-    print("\n" + "="*50)
-    print(analysis)
-    print("="*50)
-    
+    print("\n" + "="*50 + "\n" + analysis + "\n" + "="*50)
     RESULT_FILE.write_text(analysis, encoding="utf-8")
-    print(f"\nAnalysis saved to {RESULT_FILE}")
 
 if __name__ == "__main__":
     main()
