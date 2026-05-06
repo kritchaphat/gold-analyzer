@@ -76,11 +76,10 @@ def call_claude(results: List[TimeframeResult]) -> str:
         summary += f"""
 [{r.name}]
 Price  : {last['Close']:.2f}
-High   : {last['High']:.2f} | Low: {last['Low']:.2f}
 EMA    : 9={last['EMA_9']:.2f} | 21={last['EMA_21']:.2f} | 50={last['EMA_50']:.2f}
 RSI    : {last['RSI_14']:.1f}
-MACD   : {last['MACD']:.3f} | Signal={last['MACD_Signal']:.3f} | Hist={last['MACD_Hist']:.3f} ({macd_dir})
-BB     : Upper={last['BB_Upper']:.2f} | Lower={last['BB_Lower']:.2f} | Position={bb_pos}
+MACD   : Hist={last['MACD_Hist']:.3f} ({macd_dir})
+BB     : Position={bb_pos}
 ATR    : {last['ATR']:.2f}
 Trend  : {ema_trend}
 """
@@ -106,9 +105,9 @@ Please provide:
 
 Keep response concise and professional."""
 
-    # ใช้ชื่อ Model ล่าสุดที่เสถียรที่สุดในปัจจุบัน
+    # เปลี่ยนกลับมาใช้ Specific Version ของ Sonnet 3.5
     res = client.messages.create(
-        model="claude-3-5-sonnet-latest",
+        model="claude-3-5-sonnet-20240620",
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -139,7 +138,7 @@ def main():
         print("Error: No data retrieved.")
         return
 
-    print("Analyzing with Claude 3.5 Sonnet (SMC Framework)...")
+    print("Analyzing with Claude (SMC Framework)...")
     analysis = call_claude(results)
     
     print("\n" + "="*50)
