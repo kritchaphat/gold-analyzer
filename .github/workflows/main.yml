@@ -16,9 +16,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pandas yfinance anthropic
+          pip install pandas yfinance anthropic requests
 
       - name: Run Analysis
         env:
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python main.py
