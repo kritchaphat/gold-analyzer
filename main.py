@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import List
 
 # --- SETTINGS ---
-SYMBOL = "GC=F" # Gold Futures (XAU/USD)
+SYMBOL = "GC=F" # ทองคำ (XAU/USD)
 OUTPUT_DIR = Path("output")
 RESULT_FILE = OUTPUT_DIR / "analysis_result.txt"
 
@@ -26,7 +26,7 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df['TR'] = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
     df['ATR'] = df['TR'].rolling(14).mean()
     
-    # 2. EMA 3 เส้น (Trend Analysis)
+    # 2. EMA 9, 21, 50 (Trend Analysis)
     df['EMA_9']  = df['Close'].ewm(span=9,  adjust=False).mean()
     df['EMA_21'] = df['Close'].ewm(span=21, adjust=False).mean()
     df['EMA_50'] = df['Close'].ewm(span=50, adjust=False).mean()
@@ -62,39 +62,28 @@ def call_claude(results: List[TimeframeResult]) -> str:
     summary = ""
     for r in results:
         last = r.df.iloc[-1]
-        ema_trend = "BULLISH" if last['EMA_9'] > last['EMA_21'] > last['EMA_50'] \
-                    else "BEARISH" if last['EMA_9'] < last['EMA_21'] < last['EMA_50'] \
-                    else "RANGING"
-        bb_pos = "UPPER" if last['Close'] >= last['BB_Upper'] * 0.999 \
-                 else "LOWER" if last['Close'] <= last['BB_Lower'] * 1.001 \
-                 else "MID"
-        macd_dir = "BULLISH" if last['MACD_Hist'] > 0 else "BEARISH"
-        
         summary += f"""
 [{r.name}]
 Price  : {last['Close']:.2f}
 EMA    : 9={last['EMA_9']:.2f} | 21={last['EMA_21']:.2f} | 50={last['EMA_50']:.2f}
 RSI    : {last['RSI_14']:.1f}
-MACD   : Hist={last['MACD_Hist']:.3f} ({macd_dir})
-BB     : Position={bb_pos}
+MACD   : Hist={last['MACD_Hist']:.3f}
+BB     : Upper={last['BB_Upper']:.2f} | Lower={last['BB_Lower']:.2f}
 ATR    : {last['ATR']:.2f}
-Trend  : {ema_trend}
 """
     
-    prompt = f"""You are a Senior XAU/USD Quantitative Strategist specializing in SMC, Order Blocks, and Liquidity Analysis.
-Analyze the following multi-timeframe data and provide a trade plan:
+    prompt = f"""You are a Senior XAU/USD Trader. Analyze multi-timeframe data using SMC (Smart Money Concepts).
 {summary}
-Please provide:
-1. HTF Bias (H4 trend direction and reasoning)
-2. Liquidity Levels (potential BSL/SSL targets)
-3. Key Supply/Demand Zones (Order Blocks)
-4. Trade Setup: Direction, Entry, SL (ATR x 1.5), TP1, TP2, TP3
-5. Invalidation condition
-Keep response concise and professional."""
+Provide a trade plan:
+1. HTF Bias & Liquidity Targets (BSL/SSL)
+2. Supply/Demand Zones (Order Blocks)
+3. Action: BUY/SELL/WAIT
+4. Strategy: Entry, SL (ATR x 1.5), TP1, TP2, TP3
+Keep it professional."""
 
-    # อัปเดต Model Name ตามที่อาร์มขอจากรูปภาพ
+    # ใช้โมเดลที่เสถียรที่สุดสำหรับ API Key 'Forextrade' ของอาร์ม
     res = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-3-5-sonnet-20240620",
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -106,23 +95,20 @@ def main():
     results = []
     
     for name, interval in tfs.items():
-        print(f"Fetching {name}...")
+        print(f"Fetching {name} data...")
         ticker = yf.Ticker(SYMBOL)
         df = ticker.history(period="10d", interval=interval)
         if df.empty: continue
         if name == "H4":
-            df = df.resample('4h').agg({
-                'Open':'first','High':'max','Low':'min','Close':'last','Volume':'sum'
-            }).dropna()
-        df = add_indicators(df)
-        results.append(TimeframeResult(name, df))
+            df = df.resample('4h').agg({'Open':'first','High':'max','Low':'min','Close':'last','Volume':'sum'}).dropna()
+        results.append(TimeframeResult(name, add_indicators(df)))
     
     if not results:
-        print("Error: No data retrieved.")
-        return
+        print("No data found."); return
 
-    print(f"Analyzing with Claude Sonnet 4...")
+    print("Analyzing with Claude...")
     analysis = call_claude(results)
+    
     print("\n" + "="*50 + "\n" + analysis + "\n" + "="*50)
     RESULT_FILE.write_text(analysis, encoding="utf-8")
 
