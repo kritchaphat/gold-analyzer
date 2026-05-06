@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import List
 
 # --- SETTINGS ---
-SYMBOL = "GC=F" 
+SYMBOL = "GC=F" # Gold Futures (XAU/USD)
 OUTPUT_DIR = Path("output")
 RESULT_FILE = OUTPUT_DIR / "analysis_result.txt"
 
@@ -49,13 +49,12 @@ def call_claude(results: List[TimeframeResult]) -> str:
     
     prompt = f"Analyze XAU/USD using SMC (Order Blocks/Liquidity):\n{summary}\nProvide: Bias, Entry, SL, TP."
 
-        # ใช้โมเดลที่เสถียรที่สุดและฉลาดที่สุดที่ API รองรับในปัจจุบัน
+    # ใช้ชื่อโมเดลล่าสุดจากหน้า Docs ของอาร์มปี 2026
     res = client.messages.create(
-        model="claude-3-5-sonnet-20240620", 
+        model="claude-opus-4-7", 
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}]
     )
-
     return res.content[0].text
 
 def main():
@@ -73,9 +72,9 @@ def main():
         results.append(TimeframeResult(name, add_indicators(df)))
     
     if not results:
-        print("Data error"); return
+        print("Data fetch error"); return
 
-    print("Analyzing...")
+    print("Analyzing with Claude Opus 4.7...")
     analysis = call_claude(results)
     print(f"\n{analysis}")
     RESULT_FILE.write_text(analysis, encoding="utf-8")
