@@ -1,5 +1,4 @@
 import os
-import anthropic
 import pandas as pd
 import yfinance as yf
 import requests
@@ -16,7 +15,7 @@ class TimeframeResult:
 
 def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
-    # ATR & RSI Calculation
+    # คำนวณ ATR & RSI เบื้องต้น
     high_low = df['High'] - df['Low']
     high_close = (df['High'] - df['Close'].shift()).abs()
     low_close = (df['Low'] - df['Close'].shift()).abs()
@@ -39,7 +38,7 @@ def send_telegram(message: str):
     payload = {
         "chat_id": chat_id,
         "text": message,
-        "parse_mode": "Markdown" # ทำให้ข้อความสวยงาม มีตัวหนา/เอียง
+        "parse_mode": "Markdown"
     }
     res = requests.post(url, json=payload)
     if res.status_code == 200:
@@ -47,34 +46,28 @@ def send_telegram(message: str):
     else:
         print(f"Failed to send: {res.text}")
 
-def call_claude(results: List[TimeframeResult]) -> str:
-    client = anthropic.Anthropic(api_key=os.environ.get("CLAUDE_API_KEY"))
-    summary = ""
-    for r in results:
-        last = r.df.iloc[-1]
-        summary += f"*{r.name}* Price: {last['Close']:.2f}, RSI: {last['RSI_14']:.1f}, ATR: {last['ATR']:.2f}\n"
-    
-    prompt = f"Analyze XAU/USD using SMC (Order Blocks/Liquidity):\n{summary}\nProvide: Bias, Entry, SL, TP."
-    res = client.messages.create(
-        model="claude-opus-4-7", 
-        max_tokens=1024,
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return res.content[0].text
-
 def main():
+    # ดึงข้อมูล 4 ไทม์เฟรมตามระบบของอาร์ม
     tfs = {"H4": "4h", "H1": "1h", "M30": "30m", "M15": "15m"}
     results = []
+    
+    status_report = "🚀 *Gold Bot System Check*\n\n"
+    status_report += "เชื่อมต่อสำเร็จ! ข้อมูลราคาปัจจุบัน:\n"
+    
     for name, interval in tfs.items():
         df = yf.Ticker(SYMBOL).history(period="10d", interval=interval)
         if not df.empty:
-            results.append(TimeframeResult(name, add_indicators(df)))
+            data = add_indicators(df)
+            last = data.iloc[-1]
+            results.append(TimeframeResult(name, data))
+            # สร้างรายงานราคาแบบไม่ต้องง้อ AI
+            status_report += f"📍 *{name}*: {last['Close']:.2f} (RSI: {last['RSI_14']:.1f})\n"
+    
+    status_report += "\n✅ *ระบบพร้อมแล้ว!* ถ้าอาร์มเห็นข้อความนี้ แปลว่า Telegram เชื่อมต่อกับ GitHub Actions สมบูรณ์ 100% โดยไม่เสีย Token ครับ"
     
     if results:
-        analysis = call_claude(results)
-        # ตกแต่งข้อความก่อนส่ง
-        final_msg = f"🏆 *Gold SMC Analysis Report*\n\n{analysis}"
-        send_telegram(final_msg)
+        print("Sending system status to Telegram...")
+        send_telegram(status_report)
 
 if __name__ == "__main__":
     main()
