@@ -1,157 +1,77 @@
-import json
-import logging
 import os
 import time
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Dict, List, Optional
-
 import anthropic
 import pandas as pd
-import pandas_ta as ta  # หัวใจหลักในการคำนวณแบบ Kronos
 import yfinance as yf
+from dataclasses import dataclass
+from pathlib import Path
+from typing import List
 
-# --- 1. SETTINGS & LOGGING ---
-logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
-logger = logging.getLogger("mini-kronos-gold")
-
-SYMBOL = "GC=F"  # Gold Futures
+# --- SETTINGS ---
+SYMBOL = "GC=F"
 OUTPUT_DIR = Path("output")
 RESULT_FILE = OUTPUT_DIR / "analysis_result.txt"
-
-# กำหนด Timeframes ที่ต้องการวิเคราะห์
-TIMEFRAMES = {
-    "4H": {"interval": "60m", "period": "730d", "resample": "4h"},
-    "1H": {"interval": "60m", "period": "730d", "resample": None},
-    "15M": {"interval": "15m", "period": "60d", "resample": None},
-    "5M": {"interval": "5m", "period": "60d", "resample": None},
-}
 
 @dataclass
 class TimeframeResult:
     name: str
     df: pd.DataFrame
 
-# --- 2. DATA ENGINE ---
-def safe_download(symbol: str, interval: str, period: str, retries: int = 5) -> pd.DataFrame:
-    for attempt in range(1, retries + 1):
-        try:
-            logger.info(f"Downloading {symbol} ({interval}), attempt {attempt}/{retries}")
-            time.sleep(1)
-            ticker = yf.Ticker(symbol)
-            df = ticker.history(interval=interval, period=period, auto_adjust=False)
-            if df.empty: raise ValueError("No data returned from Yahoo Finance")
-            
-            # จัดการ MultiIndex columns ถ้ามี
-            if isinstance(df.columns, pd.MultiIndex):
-                df.columns = [col[0] for col in df.columns]
-                
-            return df[["Open", "High", "Low", "Close", "Volume"]].dropna()
-        except Exception as e:
-            if attempt == retries: raise e
-            time.sleep(5)
-
-def resample_ohlcv(df: pd.DataFrame, rule: str) -> pd.DataFrame:
-    return df.resample(rule).agg({
-        "Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"
-    }).dropna()
-
-# --- 3. KRONOS INDICATORS ---
 def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
-    out = df.copy()
-    
-    # ATR: ใช้เพื่อวัดความผันผวนและตั้ง SL/TP ตามแบบ Kronos
-    out["ATR"] = out.ta.atr(length=14)
-    
-    # Trend: ใช้ EMA เพื่อดูประโยคของราคา
-    out["EMA_21"] = out.ta.ema(length=21)
-    out["EMA_50"] = out.ta.ema(length=50)
-    
-    # Momentum: RSI & MACD
-    out["RSI_14"] = out.ta.rsi(length=14)
-    macd = out.ta.macd(fast=12, slow=26, signal=9)
-    out = pd.concat([out, macd], axis=1)
-    
-    return out.dropna()
+    df = df.copy()
+    # 1. คำนวณ ATR แบบ Manual (สูตรมาตรฐาน Kronos)
+    high_low = df['High'] - df['Low']
+    high_close = (df['High'] - df['Close'].shift()).abs()
+    low_close = (df['Low'] - df['Close'].shift()).abs()
+    df['TR'] = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+    df['ATR'] = df['TR'].rolling(window=14).mean()
 
-# --- 4. MINI-KRONOS AI LOGIC ---
+    # 2. คำนวณ EMA แบบ Manual
+    df['EMA_21'] = df['Close'].ewm(span=21, adjust=False).mean()
+    df['EMA_50'] = df['Close'].ewm(span=50, adjust=False).mean()
+
+    # 3. คำนวณ RSI แบบ Manual
+    delta = df['Close'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+    rs = gain / loss
+    df['RSI_14'] = 100 - (100 / (1 + rs))
+
+    return df.dropna()
+
 def call_claude(results: List[TimeframeResult]) -> str:
     api_key = os.environ.get("CLAUDE_API_KEY")
-    if not api_key: return "Error: No CLAUDE_API_KEY found in environment."
-    
+    if not api_key: return "Error: No API Key"
     client = anthropic.Anthropic(api_key=api_key)
     
-    # สร้างข้อมูลสรุปแบบ Sequence (ภาษาแท่งเทียน) เพื่อส่งให้ AI
-    data_summary = ""
+    summary = ""
     for r in results:
         last = r.df.iloc[-1]
-        # ดึงราคาปิดย้อนหลัง 10 แท่ง เพื่อสร้างชุดข้อมูลแบบ Transformer
-        sequence = r.df['Close'].tail(10).round(2).tolist()
-        
-        data_summary += f"""
-[Timeframe: {r.name}]
-- Candle Sequence (Last 10): {sequence}
-- Current OHLC: O={last['Open']:.2f}, H={last['High']:.2f}, L={last['Low']:.2f}, C={last['Close']:.2f}
-- Indicators: ATR={last['ATR']:.2f}, RSI={last['RSI_14']:.1f}, EMA21={last['EMA_21']:.2f}
-- MACD: {last.get('MACD_12_26_9', 0):.4f} | Signal: {last.get('MACDs_12_26_9', 0):.4f}
-"""
+        seq = r.df['Close'].tail(10).round(2).tolist()
+        summary += f"\n[{r.name}]: Seq={seq}\nLast: C={last['Close']:.2f}, ATR={last['ATR']:.2f}, RSI={last['RSI_14']:.1f}\n"
 
-    # Prompt ที่ออกแบบมาเพื่อดึงพลังของ Foundation Model
-    prompt = f"""You are 'Mini-Kronos', a specialized AI Foundation Model for Financial Markets.
-Analyze the following Gold (GC=F) candle sequences as a linguistic pattern.
-
-### INSTRUCTIONS:
-1. Translate the candle sequences into a Market Bias (Bullish/Bearish).
-2. Identify Liquidity Zones (BSL/SSL) and Fair Value Gaps (FVG) from the numbers.
-3. Use Monte Carlo-style reasoning to provide 3 probabilistic scenarios with percentages.
-4. Recommend a Trade Plan: Entry, Stop Loss (using ATR), and Take Profit.
-
-### DATA INPUT:
-{data_summary}
-
-### OUTPUT FORMAT:
-- BIAS: [Result]
-- PROBABILITY: [Bullish % | Bearish % | Sideways %]
-- NARRATIVE: [Brief logic]
-- ACTION: [Buy/Sell/Wait]
-- LEVELS: [Entry, SL, TP]
-"""
-
-    try:
-        res = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=1200,
-            temperature=0.2, # ต่ำเพื่อให้วิเคราะห์ตัวเลขได้แม่นยำ
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return res.content[0].text
-    except Exception as e:
-        return f"Mini-Kronos Analysis Failed: {str(e)}"
-
-# --- 5. MAIN EXECUTION ---
-def main():
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    results = []
+    prompt = f"Act as Mini-Kronos Gold Expert. Analyze these sequences & indicators: {summary}\nProvide: 1. Bias 2. 3-Scenarios with % 3. Trade Plan (Entry/SL/TP)."
     
-    for tf, cfg in TIMEFRAMES.items():
-        try:
-            df = safe_download(SYMBOL, cfg["interval"], cfg["period"])
-            if cfg["resample"]: 
-                df = resample_ohlcv(df, cfg["resample"])
-            df = add_indicators(df)
-            results.append(TimeframeResult(tf, df))
-            logger.info(f"Successfully processed {tf}")
-        except Exception as e:
-            logger.error(f"Failed to process {tf}: {e}")
+    res = client.messages.create(
+        model="claude-3-5-sonnet-20241022",
+        max_tokens=1000,
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return res.content[0].text
 
-    if results:
-        analysis = call_claude(results)
-        print("\n=== MINI-KRONOS GOLD ANALYSIS ===\n")
-        print(analysis)
-        # บันทึกผลลัพธ์ลงไฟล์เพื่อใช้ใน GitHub Actions
-        RESULT_FILE.write_text(analysis, encoding="utf-8")
-    else:
-        logger.error("No data available for analysis.")
+def main():
+    OUTPUT_DIR.mkdir(exist_ok=True)
+    tfs = {"4H": "4h", "1H": "1h", "15M": "15m"}
+    results = []
+    for name, interval in tfs.items():
+        df = yf.Ticker(SYMBOL).history(period="60d", interval="60m" if "H" in name else "15m")
+        if name == "4H": df = df.resample('4H').agg({'Open':'first','High':'max','Low':'min','Close':'last','Volume':'sum'})
+        df = add_indicators(df)
+        results.append(TimeframeResult(name, df))
+    
+    analysis = call_claude(results)
+    print(analysis)
+    RESULT_FILE.write_text(analysis, encoding="utf-8")
 
 if __name__ == "__main__":
     main()
