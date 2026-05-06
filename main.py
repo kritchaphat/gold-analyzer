@@ -49,12 +49,13 @@ def call_claude(results: List[TimeframeResult]) -> str:
     
     prompt = f"Analyze XAU/USD using SMC (Order Blocks/Liquidity):\n{summary}\nProvide: Bias, Entry, SL, TP."
 
-    # ใช้โมเดลตามที่แนะนำในภาพล่าสุด และตรวจสอบแล้วว่าไม่มีคำว่า model= ซ้ำซ้อน
+        # ใช้โมเดลที่เสถียรที่สุดและฉลาดที่สุดที่ API รองรับในปัจจุบัน
     res = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-3-5-sonnet-20240620", 
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}]
     )
+
     return res.content[0].text
 
 def main():
