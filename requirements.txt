@@ -1,7 +1,4 @@
-def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
-    out = df.copy()
-    # เพิ่ม ATR เพื่อวัดความผันผวน (ใช้ตั้ง SL/TP แบบ Kronos)
-    out["ATR"] = out.ta.atr(length=14) 
-    # Indicators เดิม (EMA, RSI, MACD) คงไว้
-    # ... (โค้ดเดิมของคุณ) ...
-    return out.dropna()
+anthropic
+pandas
+pandas-ta
+yfinance
