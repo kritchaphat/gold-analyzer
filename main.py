@@ -115,9 +115,9 @@ def main():
     # บันทึกลงไฟล์
     RESULT_FILE.write_text(analysis, encoding="utf-8")
     
-    # ส่งเข้า Telegram
-    final_msg = f"🏆 *Gold SMC Analysis (Opus 4.7)*\n\n{analysis}"
-    send_telegram(final_msg)
+    # ส่งเข้า Telegram (ปิดชั่วคราว)
+    # final_msg = f"🏆 *Gold SMC Analysis (Opus 4.7)*\n\n{analysis}"
+    # send_telegram(final_msg)
     
     print(f"\n--- Analysis Finished ---\n{analysis}")
 
